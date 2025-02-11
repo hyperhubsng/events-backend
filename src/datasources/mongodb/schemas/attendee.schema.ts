@@ -1,0 +1,53 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document, HydratedDocument, Types } from 'mongoose';
+
+@Schema({ timestamps: true })
+export class Attendee extends Document {
+  @Prop()
+  ownerId: Types.ObjectId;
+
+  @Prop()
+  eventId: Types.ObjectId;
+
+  @Prop()
+  tickeId: Types.ObjectId;
+
+  @Prop()
+  email: string;
+
+  @Prop()
+  reference: string;
+
+  @Prop()
+  unitPrice: number;
+
+  @Prop()
+  quantity: number;
+
+  @Prop()
+  actualAmount: number;
+
+  @Prop()
+  amountPaid: number;
+
+  @Prop({
+    default:  0
+  })
+  discountValue: number;
+  
+  @Prop({
+    default  :false
+  })
+  usedDiscount: boolean;
+  
+  @Prop({
+    default  :true
+  })
+  isValid: boolean;
+
+  @Prop()
+  dateUsed: Date;
+}
+
+export type AttendeeDocument = HydratedDocument<Attendee>;
+export const AttendeeSchema = SchemaFactory.createForClass(Attendee);

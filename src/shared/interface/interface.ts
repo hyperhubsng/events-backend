@@ -1,0 +1,158 @@
+import { Types } from 'mongoose';
+
+export interface ILoginData {
+  email: string;
+  password: string;
+}
+
+export interface IPagination {
+  currentPage: number;
+  perPage: number;
+  prevPage: number | null;
+  nextPage: number | null;
+  total: number;
+  totalPages: number;
+  offset: number;
+}
+
+export interface IResponseInterface {
+  status?: string;
+  data: Record<string, any> | any;
+  cache?: Record<string, any>;
+  pagination?: IPagination;
+}
+
+export interface IUserJwtPayload {
+  email: string;
+  user: Types.ObjectId;
+  lastName: string;
+  firstName: string;
+  audience: string;
+  issuer: string;
+  subject: string;
+  sub: Types.ObjectId;
+  userId: Types.ObjectId;
+  communtityManaged: Types.ObjectId;
+}
+
+export interface ILoginResponse {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  token: string;
+  profileImageUrl: string | null;
+}
+
+export interface IHttpQueryParser {
+  skip: number;
+  filters: string[];
+  populate: string[];
+  from: string;
+  to: string;
+  page: number;
+  docLimit: number;
+  dbQueryParam: Record<string, any>;
+  sort: string;
+}
+
+export interface ITransactionData {
+  user: Types.ObjectId | string;
+  paymentReference: string;
+  transactionId?: string;
+  paymentMethod: string;
+  narration: string;
+  status: string;
+  currency: string;
+  amount: number;
+  processor: string;
+  transactionDate: Date;
+  transactionType: string;
+  userPaymentIdentifier: string;
+  originalAmount?: number;
+  productTitle: string;
+  productId: string;
+  beneficiaryId: string | Types.ObjectId;
+  firstName?: string;
+  lastName?: string;
+}
+
+export interface IPaymentHeaders {
+  Authorization: string;
+  'Content-Type': string;
+}
+
+export interface IPaystackConfirmationEvent {
+  paymentReference: string;
+  paymentLogData: {
+    hasBeenProcessed: boolean;
+    providerResponse: string;
+    status: string;
+  };
+  promotionData: {
+    paid: boolean;
+  };
+  paymentData: {
+    userId: Types.ObjectId;
+    promotionId: Types.ObjectId;
+    paymentType: string;
+    amount: number;
+    paymentReference: string;
+    paymentDate: Date;
+    narration: string;
+    processor: string;
+  };
+}
+
+export interface ISocialLink {
+  name: string;
+  url: string;
+}
+
+export interface IUser {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  firstName: string;
+  lastName: string;
+  nickName: string;
+  phoneNumber: string;
+}
+
+export interface ICommunity {
+  description: string;
+  isPublic: boolean;
+  socialLinks: [ISocialLink];
+  managerId: Types.ObjectId;
+}
+
+export interface ITemporaryUserResponse {
+  message: string;
+  otpEmail: string;
+  expirationTime: number;
+  durationType: string;
+}
+
+export interface ISuccess {
+  customerName: string;
+  done: boolean;
+  results: Array<IFormData>;
+}
+
+export interface IFormData {
+  name: string;
+  value: any;
+}
+
+export interface IError {
+  errors: any;
+  status: string;
+  message: string;
+  responseMessage: string;
+}
+
+export interface ICommunityManagerJWT extends IUserJwtPayload {
+  communtityManaged: Types.ObjectId;
+}
+
+export type JwtUnion = Partial<IUserJwtPayload & ICommunityManagerJWT>;
