@@ -12,5 +12,7 @@ export const validationMessages = (field: string) => {
     precision: `${field} is not a valid amount`,
     min: `${field} cannot be less than 200`,
     max: `${field} cannot be greater than 50000`,
+    base: `${field} must be an array`,
+    numberBase: `${field} must contain only numbers`,
   };
 };

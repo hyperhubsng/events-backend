@@ -14,10 +14,7 @@ const HTTPQueryParser = (obj: Record<string, any>): IHttpQueryParser => {
     from,
     to,
     populate,
-    type,
-    productType,
     status,
-    unit,
     sort,
   } = obj;
   const pageNumber = Math.abs(parseInt(page)) || 1;
@@ -45,16 +42,8 @@ const HTTPQueryParser = (obj: Record<string, any>): IHttpQueryParser => {
     };
   }
 
-  if (productType) {
-    dbQueryParam.productType = productType;
-  }
-
   if (status) {
     dbQueryParam.status = status;
-  }
-
-  if (unit) {
-    dbQueryParam.unit = unit;
   }
 
   return {

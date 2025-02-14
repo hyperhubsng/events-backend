@@ -156,3 +156,5 @@ export interface ICommunityManagerJWT extends IUserJwtPayload {
 }
 
 export type JwtUnion = Partial<IUserJwtPayload & ICommunityManagerJWT>;
+
+export type numStrObj  = number | string | object

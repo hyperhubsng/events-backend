@@ -25,6 +25,22 @@ export class UserService {
     }
   }
 
+  async rejectUserTyype(userId : string  | Types.ObjectId, category : string): Promise<void> {
+    try {
+      const user = await this.getUser({_id : userId})
+      if(!user){
+        return Promise.reject({
+          ...responseHash.notFound,
+          message : "user not found"
+        })
+      }
+      if(user.userType === category){
+        return Promise.reject(responseHash.forbiddenAction)
+      }
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
   async checkForExistingUser(queryParam: Record<string, any>[]): Promise<void> {
     const user: any = await this.mongoService.users.getOne(
       { $or: queryParam },

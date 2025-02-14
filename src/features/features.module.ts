@@ -39,16 +39,14 @@ import {
  AttendeeSchema
 } from '@/datasources/mongodb/schemas/attendee.schema';
 import { Ticket , TicketSchema } from '@/datasources/mongodb/schemas/ticket.schema';
-// import { CommunityService } from './event/community.service';
-// import { MemberController } from './attendee/member.controller';
-// import { MatchService } from './ticket/match.service';
-// import { MatchController } from './ticket/match.controller';
-// import { CommunityController } from './event/community.controllers';
+import { EventsController } from './event/event.controllers';
+import { EventService } from './event/event.service';
 
 @Module({
   controllers: [
     AuthController,
     UserController,
+    EventsController
   ],
   providers: [
     ...redisProviders,
@@ -72,6 +70,7 @@ import { Ticket , TicketSchema } from '@/datasources/mongodb/schemas/ticket.sche
     UserService,
     PaymentService,
     EventManager,
+    EventService
   ],
   imports: [
     MongooseModule.forFeature(

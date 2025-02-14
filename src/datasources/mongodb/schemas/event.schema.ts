@@ -6,6 +6,9 @@ export class Event extends Document {
   @Prop({ type: Types.ObjectId, ref: 'users' })
   ownerId: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'users' })
+  createdBy: Types.ObjectId;
+
   @Prop()
   description: string;
 
@@ -18,7 +21,9 @@ export class Event extends Document {
   @Prop()
   venue: string;
 
-  @Prop()
+  @Prop({
+    default : "https://images.com/fake-image.jpeg"
+  })
   bannerUrl: string;
 
   @Prop()
@@ -31,8 +36,8 @@ export class Event extends Document {
   commentTitle: string;
 
   @Prop({
-    enum: ['pending', 'ongoing' , 'completed' , 'deleted'],
-    default: 'active',
+    enum: ['pending', 'ongoing' , 'completed' , 'deleted' , 'rejected' , 'cancelled'],
+    default: 'pending',
   })
   status: string;
 
@@ -45,13 +50,27 @@ export class Event extends Document {
   @Prop({
     default :500
   })
-  maxAttendees: number;
+  availableSlots: number;
 
   @Prop({
-    type : []
+    type: {
+      type: String, 
+      enum: ['Point'], 
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number]
+    }
   })
-  location: number[];
+  location: { type: string; coordinates: [Number] };
+
+  @Prop({
+    default : 0
+  })
+  cost: number;
 }
 
 export type EventDocument = HydratedDocument<Event>;
 export const EventSchema = SchemaFactory.createForClass(Event);
+
+EventSchema.index({location : "2dsphere"})
