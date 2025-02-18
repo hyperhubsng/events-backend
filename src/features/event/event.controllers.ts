@@ -18,14 +18,16 @@ import { PUBLIC } from '../auth/public.decorator';
 import { EventService } from './event.service';
 import { ObjectIdValidationPipe } from '@/shared/pipes/object-id-pipe';
 import { Types } from 'mongoose';
-import { AddEventDTO, CreateTicketDTO, HttpQueryDTO } from './event.dto';
-import { AddEventPipe, CreateTicketPipe, EventQueryPipe } from './event.pipe';
+import { AddEventDTO, CreateTicketDTO, HttpQueryDTO, PurchaseTicketDTO } from './event.dto';
+import { AddEventPipe, CreateTicketPipe, EventQueryPipe, PurchaseTicketPipe } from './event.pipe';
+import { PaymentService } from '../payment/payment.service';
 
 @Controller('events')
 export class EventsController {
   constructor(
     private readonly successResponse: SuccessResponse,
-    private readonly eventService : EventService 
+    private readonly eventService : EventService ,
+    private readonly paymentService : PaymentService
   ) {}
 
   @Post()
@@ -49,7 +51,15 @@ export class EventsController {
     const { data, extraData } = await this.eventService.listEvents(req , query , user);
     await this.successResponse.ok(res, req, { data, pagination: extraData }); 
   }
-  
+
+
+  @PUBLIC()
+  @Get('/verify-paystack-payment')
+  async verifyPaystackPayment(@Req() req: Request, @Res() res: Response) {
+    const data = await this.paymentService.runPaystackCallback(req);
+    await this.successResponse.ok(res, req, { data });
+  }
+
   @PUBLIC()
   @Get("/fetch-for-public")
   async listCommunitiesForAnons(
@@ -76,13 +86,27 @@ export class EventsController {
   @Get("/:eventId/tickets")
   async listTickets(
     @Req() req: Request,
-    @Res() res: Response ,
-    @Query(new EventQueryPipe()) query : HttpQueryDTO , 
+    @Res() res: Response , 
+    @Param("eventId" , new ObjectIdValidationPipe()) eventId : string,
+    @UserDecorator() user: User,
   ) {
-    const { data, extraData } = await this.eventService.listTickets();
+    const { data, extraData } = await this.eventService.listTickets(req , eventId , user);
     await this.successResponse.ok(res, req, { data, pagination: extraData }); 
   }
 
+  @PUBLIC()
+  @Post("/:eventId/purchase")
+  async buyTicket(
+    @Req() req: Request,
+    @Res() res: Response , 
+    @Param("eventId" , new ObjectIdValidationPipe()) eventId : string,
+    @Body(new PurchaseTicketPipe()) body : PurchaseTicketDTO
+  ) {
+    const data  = await this.eventService.buyTicket(eventId , body) ;
+    await this.successResponse.ok(res, req, { data }); 
+  }
+
+  
   @PUBLIC()
   @Get(':id')
   async getEvent(

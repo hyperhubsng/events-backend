@@ -21,7 +21,7 @@ export class Paystack implements PaymentProcessor {
       const { paymentReference, amount, currency } = data;
 
       const paymentData = {
-        email: data.userPaymentIdentifier,
+        email: data.userIdentifier,
         currency,
         amount: Number(amount) * 100,
         reference: paymentReference,

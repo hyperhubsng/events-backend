@@ -16,6 +16,18 @@ export class Attendee extends Document {
   email: string;
 
   @Prop()
+  phoneNumber: string;
+
+  @Prop()
+  title: string;
+
+  @Prop()
+  firstName: string;
+
+  @Prop()
+  lastName: string;
+
+  @Prop()
   reference: string;
 
   @Prop()

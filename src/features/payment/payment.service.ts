@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PaymentFactory } from './payment.factory';
-import { ITransactionData } from '@/shared/interface/interface';
+import { IPaystackConfirmationEvent, ITransactionData } from '@/shared/interface/interface';
 import { MongoDataServices } from '@/datasources/mongodb/mongodb.service';
 import { IPaymentLinkResponse } from './processor.interface';
 import { Request } from 'express';
@@ -16,6 +16,7 @@ export class PaymentService {
   ) {}
   async makePayment(body: ITransactionData): Promise<IPaymentLinkResponse> {
     try {
+    
       body.amount = appConfig.isLive ? body.amount : 1000;
       const paymentFactory = new PaymentFactory();
       const processor = paymentFactory.getProcessor(body.processor);
@@ -24,6 +25,7 @@ export class PaymentService {
     } catch (err) {
       return Promise.reject(err);
     } finally {
+
       //Log the purchase order and the associated payment information
       this.logPayment(body);
     }
@@ -92,22 +94,26 @@ export class PaymentService {
         });
       }
       const paymentMeta = paymentLog.meta;
-      console.log(paymentMeta);
-      const eventManagerPayload = {
+      const eventManagerPayload : IPaystackConfirmationEvent = {
         paymentReference,
         paymentLogData: {
           hasBeenProcessed: true,
           providerResponse: verificationResponse.status,
           status: verificationResponse.status,
         },
-        promotionData: {
-          paid: true,
+        attendeeData: {
+          firstName : paymentMeta.firstName,
+          tickets : paymentMeta.tickets , 
+          lastName : paymentMeta.lastName , 
+          transactionReference : paymentReference,
+          email : paymentMeta.email,
+          phoneNumber : paymentMeta.phoneNumber
         },
         paymentData: {
-          ...paymentMeta,
+          userIdentifier : paymentMeta.email , 
           paymentDate: new Date(verificationResponse.paid_at),
           amount: paymentMeta.originalAmount,
-          //Use the email or something that links to the user to retrieve the user id
+          ...paymentMeta,
         },
       };
       this.eventEmitter.emit(

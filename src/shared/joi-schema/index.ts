@@ -4,6 +4,7 @@ import * as joiDate from '@joi/date';
 import { rejectPastDate } from '../utils/reject-past-date';
 import { validateObjectId } from '../utils/objectid-joi-validator';
 import { dateChecker } from '../utils/date-checker';
+import { ObjectIdValidationPipe } from '../pipes/object-id-pipe';
 const joi = Joi.extend(joiDate);
 
 export const addEventSchema = joi
@@ -400,6 +401,82 @@ export const createTicketSchema = joi
         'any.only': validationMessages('orderLimit').only,
         'number.min': validationMessages('orderLimit').min,
         'number.positive': validationMessages('orderLimit').positive,
+      }),
+  })
+  .options({ stripUnknown: true });
+
+
+export const purchaseTicketSchema = joi
+  .object({
+    email: joi
+      .string()
+      .email({
+        minDomainSegments: 2,
+      })
+      .required()
+      .messages({
+        'string.empty': validationMessages('email').empty,
+        'any.required': validationMessages('email').required,
+        'any.only': validationMessages('email').only,
+      }),
+    phoneNumber: joi
+      .string()
+      .required()
+      .pattern(new RegExp('^(\\+?234|0)?[789][01]\\d{8}$'))
+      .messages({
+        'string.pattern.base': 'Provide a valid phone number',
+        'string.empty': validationMessages('phoneNumber').empty,
+        'any.required': validationMessages('phoneNumber').required,
+        'any.only': validationMessages('phoneNumber').only,
+        'string.base': validationMessages('phoneNumber').string,
+      }),
+    firstName: joi
+      .string()
+      .required()
+      .messages({
+        'any.required': validationMessages('firstName').required,
+        'string.empty': validationMessages('firstName').empty,
+        'any.only': validationMessages('firstName').only,
+        'string.base': validationMessages('firstName').string,
+      }),
+    lastName: joi
+      .string()
+      .required()
+      .messages({
+        'any.required': validationMessages('lastName').required,
+        'string.empty': validationMessages('lastName').empty,
+        'any.only': validationMessages('lastName').only,
+        'string.base': validationMessages('lastName').string,
+      }),
+    tickets: joi
+      .array()
+      .items(
+        joi.object({
+          ticketId : joi.string().custom(validateObjectId).required(),
+          quantity : joi
+            .number()
+            .required()
+        })
+      )
+      .required()
+      .messages({
+        'any.required': validationMessages('tickets').required,
+        'any.only': validationMessages('tickets').only,
+    }),
+    charges: joi
+      .array()
+      .items(
+        joi.object({
+          title : joi.string().required(),
+          amount : joi
+            .number()
+            .required()
+        })
+      )
+      .optional()
+      .messages({
+        'any.required': validationMessages('charg').required,
+        'any.only': validationMessages('charg').only,
       }),
   })
   .options({ stripUnknown: true });

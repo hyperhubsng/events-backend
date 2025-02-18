@@ -1,6 +1,6 @@
 import { MongoDataServices } from '@/datasources/mongodb/mongodb.service';
 import { User } from '@/datasources/mongodb/schemas/user.schema';
-import { IPagination, numStrObj } from '@/shared/interface/interface';
+import { IPagination, ITransactionData, numStrObj } from '@/shared/interface/interface';
 import HTTPQueryParser from '@/shared/utils/http-query-parser';
 import { ResponseExtraData } from '@/shared/utils/http-response-extra-data';
 import { Injectable } from '@nestjs/common';
@@ -8,15 +8,19 @@ import { Request } from 'express';
 import { responseHash } from '@/constants';
 import { PipelineStage, Types, _FilterQuery } from 'mongoose';
 import { UserService } from '../user/user.service';
-import { AddEventDTO, CreateTicketDTO, HttpQueryDTO } from './event.dto';
+import { AddEventDTO, CreateTicketDTO, HttpQueryDTO, PurchaseTicketDTO } from './event.dto';
 import { Event } from '@/datasources/mongodb/schemas/event.schema';
 import { Ticket } from '@/datasources/mongodb/schemas/ticket.schema';
+import { PaymentService } from '../payment/payment.service';
+import { AxiosError } from 'axios';
+import { v4 as uuid } from 'uuid';
 
 @Injectable()
 export class EventService {
   constructor(
     private readonly mongoService: MongoDataServices,
     private readonly userService: UserService,
+    private readonly paymentService : PaymentService
   ) {}
   async addEvent(data : AddEventDTO , user : User) {
     try {
@@ -110,7 +114,6 @@ export class EventService {
     limit: number = 1000,
   ) {
     try {
-      console.log(query)
       let geoQueryStage : PipelineStage[] = [] 
       if(query.distance){
         geoQueryStage = [{
@@ -271,7 +274,7 @@ export class EventService {
     }
   }
 
-  async getTicket(query : _FilterQuery<Ticket>) {
+  async getTicket(query : _FilterQuery<Ticket>) : Promise<Ticket> {
     try {
         return this.mongoService.tickets.getOneWithAllFields(query)
     } catch (err) {
@@ -279,14 +282,204 @@ export class EventService {
     }
   }
 
-  async listTickets() {
+  async aggregateTickets( 
+    query: any,
+    skip: number = 0,
+    limit: number = 1000,
+  ) {
     try {
-        const extraData : any = []
-        return {
-          data  :[] , 
-          extraData 
-        }
+      const result = await this.mongoService.tickets.aggregateRecords([
+        {
+          $match: query,
+        },
+        {
+          $lookup: {
+            from: 'attendees',
+            let: {
+              ticketId: '$ticketId',
+            },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ['$ticketId', '$$ticketId'],
+                  },
+                },
+              }
+            ],
+            as: 'attendees',
+          },
+        },
+        {
+          $project : {
+            attendees : 1 , 
+            ticketId: "$_id",
+            eventId: 1,
+            ownerId: 1,
+            title: 1,
+            isAvailable: 1,
+            hasDiscount: 1,
+            discountValue : {
+              $cond : [
+                {
+                  $gt: ['$discountValue', null],
+                },
+                '$discountValue',
+                '',
+              ]
+            },
+            discountType : {
+              $cond : [
+                {
+                  $gt: ['$discountType', null],
+                },
+                '$discountType',
+                '',
+              ]
+            },
+            quantity: 1,
+            availableTickets : {
+              $cond : [
+                {
+                  $gt: ['$available', null],
+                },
+                '$available',
+                '$quantity',
+              ]
+            },
+            soldTickets : {
+              $cond : [
+                {
+                  $gt: ['$discountType', null],
+                },
+                '$discountType',
+                0,
+              ]
+            },
+            orderLimit: 1,
+            createdAt: 1,
+            updatedAt: 1,
+          }
+        },
+        {
+          $skip: skip,
+        },
+        {
+          $limit: limit,
+        },
+        {
+          $sort: {
+            createdAt: -1,
+          },
+        },
+      ]);
+      return result;
     } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  async listTickets(req: Request , eventId : string ,  user?:User) {
+    try {
+      const { skip, docLimit , dbQueryParam } = HTTPQueryParser(req.query);
+
+      const query = {
+        eventId : new Types.ObjectId(eventId)
+      }
+      const queryResult = await this.aggregateTickets(query, skip, docLimit);
+      const queryCount = await this.mongoService.events.count(query);
+      const extraData: IPagination = ResponseExtraData(
+        req,
+        queryResult.length,
+        queryCount,
+      );
+
+      return {
+        status: 'success',
+        data: queryResult,
+        extraData: extraData,
+      };
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  async buyTicket(eventId: string, body: PurchaseTicketDTO) {
+    try {
+      const {tickets , charges} = body 
+      const query: Record<string, any> = {
+        _id: new Types.ObjectId(eventId),
+      };
+      const event = await this.getOneEvent(query)
+
+      const totalCharges : number  = charges.reduce((a , b) => a + b.amount , 0)
+     
+      let totalAmount = 0
+      for(const ticket of tickets){
+        let t = await this.getTicket({_id : new Types.ObjectId(ticket.ticketId)}) 
+        //Confirm that the ticket exists 
+        if(!t){
+          return Promise.reject({
+            ...responseHash.notFound , 
+            message  :`Tickets you selected were not found`
+          })
+        }
+        if(!t.isAvailable){
+          return Promise.reject({
+            ...responseHash.badPayload , 
+            message  :`${t.title} is already sold out`
+          })
+        }
+        //Confirm that the ticket is still available 
+        if(ticket.quantity > t.quantity){
+          return Promise.reject({
+            ...responseHash.badPayload , 
+            message  :`You can only purchase ${t.quantity} tickets of ${t.title}`
+          })
+        }
+        
+        ticket.amount = ticket.quantity * t.price
+        ticket.title = t.title 
+        ticket.eventId = t.eventId 
+        ticket.ownerId = t.ownerId
+        totalAmount += ticket.amount
+      }
+     
+      totalAmount += totalCharges
+
+      const paymentData: ITransactionData = {
+        paymentReference: uuid(),
+        currency: 'NGN',
+        processor: 'paystack',
+        narration: `Payment for Match ${event.title} `,
+        user: body.email,
+        amount: totalAmount * 100,
+        paymentMethod: 'web',
+        status: 'pending',
+        transactionDate: new Date(),
+        transactionType: 'debit',
+        userIdentifier: body.email,
+        productId: new Types.ObjectId(eventId),
+        productTitle: 'events',
+        originalAmount: totalAmount,
+        beneficiaryId: event.ownerId,
+        ...body,
+      };
+      //Make Payment
+      const paymentBody = await this.paymentService.makePayment(paymentData);
+      //The end goal of this process is to return a payment link
+      return {
+        hasPaymentLink: true,
+        paymentInfo: paymentBody.data,
+
+      };
+    } catch (err) {
+      if (err instanceof AxiosError) {
+        return Promise.reject({
+          ...responseHash.badPayload,
+          message: 'Unable to make payment now',
+        });
+      }
       return Promise.reject(err);
     }
   }

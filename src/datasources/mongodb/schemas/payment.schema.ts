@@ -7,6 +7,9 @@ export class Payment extends Document {
   userId: Types.ObjectId;
 
   @Prop()
+  userIdentifier: string;
+
+  @Prop()
   productId: Types.ObjectId;
 
   @Prop()

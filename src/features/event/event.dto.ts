@@ -1,3 +1,4 @@
+import { ICharges, ITicket } from "@/shared/interface/interface";
 import { Types } from "mongoose";
 
 export class AddEventDTO {
@@ -38,4 +39,15 @@ export class CreateTicketDTO {
     booked : number ; 
     email : string;
     orderLimit : number
+}
+
+
+
+export class PurchaseTicketDTO {
+    firstName : string
+    lastName : string 
+    phoneNumber : string 
+    email : string;
+    tickets : ITicket[]
+    charges : ICharges[]
 }

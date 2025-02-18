@@ -69,10 +69,10 @@ export interface ITransactionData {
   processor: string;
   transactionDate: Date;
   transactionType: string;
-  userPaymentIdentifier: string;
+  userIdentifier: string;
   originalAmount?: number;
   productTitle: string;
-  productId: string;
+  productId: string | Types.ObjectId;
   beneficiaryId: string | Types.ObjectId;
   firstName?: string;
   lastName?: string;
@@ -83,6 +83,19 @@ export interface IPaymentHeaders {
   'Content-Type': string;
 }
 
+export interface IPaymentData {
+  userId ?: Types.ObjectId;
+  productId: Types.ObjectId;
+  productTitle : string ; 
+  paymentType: string;
+  paymentReference: string;
+  paymentDate: Date;
+  narration: string;
+  processor: string;
+  userIdentifier : string 
+  tickets : ITicket[] 
+  charges : ICharges[]
+}
 export interface IPaystackConfirmationEvent {
   paymentReference: string;
   paymentLogData: {
@@ -90,19 +103,8 @@ export interface IPaystackConfirmationEvent {
     providerResponse: string;
     status: string;
   };
-  promotionData: {
-    paid: boolean;
-  };
-  paymentData: {
-    userId: Types.ObjectId;
-    promotionId: Types.ObjectId;
-    paymentType: string;
-    amount: number;
-    paymentReference: string;
-    paymentDate: Date;
-    narration: string;
-    processor: string;
-  };
+  attendeeData:IAttendee,
+  paymentData: IPaymentData;
 }
 
 export interface ISocialLink {
@@ -158,4 +160,27 @@ export interface ICommunityManagerJWT extends IUserJwtPayload {
 
 export type JwtUnion = Partial<IUserJwtPayload & ICommunityManagerJWT>;
 
-export type numStrObj  = number | string | object
+export type numStrObj  = number | string | object 
+
+export interface ITicket {
+  ticketId : string 
+  quantity : number 
+  amount : number ,
+  title : string ,
+  eventId : Types.ObjectId , 
+  ownerId : Types.ObjectId
+}
+
+export interface ICharges {
+  name : string 
+  amount : number 
+}
+
+export interface IAttendee {
+  firstName : string ,
+  transactionReference : string , 
+  lastName : string 
+  email : string 
+  phoneNumber : string 
+  tickets : ITicket[]
+}

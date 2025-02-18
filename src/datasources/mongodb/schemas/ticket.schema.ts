@@ -24,8 +24,22 @@ export class Ticket extends Document {
   })
   hasDiscount: boolean;
 
+  @Prop({
+    enum : ["flat" , "percent"]
+  })
+  discountType: string;
+
   @Prop()
-  amount: number;
+  discountValue: number;
+
+  @Prop()
+  hasCappedDiscount: boolean;
+
+  @Prop()
+  cappedDiscountAmount: number;
+
+  @Prop()
+  price: number;
 
   @Prop()
   discountAmount: number;
