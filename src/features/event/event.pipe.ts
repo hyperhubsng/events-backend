@@ -1,8 +1,10 @@
 import { pipeTransformer } from '@/shared/utils/pipe.transformer';
 import { ArgumentMetadata, BadRequestException, Injectable, PipeTransform } from '@nestjs/common';
-import { AddEventDTO, HttpQueryDTO } from './event.dto';
-import { addEventSchema, eventListSchema } from '@/shared/joi-schema';
+import { AddEventDTO, CreateTicketDTO, HttpQueryDTO } from './event.dto';
+import { addEventSchema, createTicketSchema, eventListSchema } from '@/shared/joi-schema';
 import { responseHash } from '@/constants';
+
+
 export class AddEventPipe implements PipeTransform {
   transform(value: AddEventDTO) {
     return pipeTransformer<AddEventDTO>(value, addEventSchema);
@@ -26,5 +28,11 @@ export class EventQueryPipe implements PipeTransform {
       return value;
     }
     return value;
+  }
+}
+
+export class CreateTicketPipe implements PipeTransform {
+  transform(value: CreateTicketDTO) {
+    return pipeTransformer<CreateTicketDTO>(value, createTicketSchema);
   }
 }

@@ -6,10 +6,11 @@ import { ResponseExtraData } from '@/shared/utils/http-response-extra-data';
 import { Injectable } from '@nestjs/common';
 import { Request } from 'express';
 import { responseHash } from '@/constants';
-import { PipelineStage, Types } from 'mongoose';
+import { PipelineStage, Types, _FilterQuery } from 'mongoose';
 import { UserService } from '../user/user.service';
-import { AddEventDTO, HttpQueryDTO } from './event.dto';
+import { AddEventDTO, CreateTicketDTO, HttpQueryDTO } from './event.dto';
 import { Event } from '@/datasources/mongodb/schemas/event.schema';
+import { Ticket } from '@/datasources/mongodb/schemas/ticket.schema';
 
 @Injectable()
 export class EventService {
@@ -164,6 +165,24 @@ export class EventService {
           $unwind: '$organizationData',
         },
         {
+          $lookup: {
+            from: 'tickets',
+            let: {
+              eventId: '$_id',
+            },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ['$eventId', '$$eventId'],
+                  },
+                },
+              }
+            ],
+            as: 'tickets',
+          },
+        },
+        {
           $skip: skip,
         },
         {
@@ -176,6 +195,97 @@ export class EventService {
         },
       ]);
       return result;
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  async findEvent(req: Request , httpQuery : HttpQueryDTO ,  user?:User) {
+    try {
+      const { skip, docLimit , dbQueryParam } = HTTPQueryParser(req.query);
+
+      const query = this.httpQueryFormulator(httpQuery , user) 
+      if(dbQueryParam.createdAt){
+        query.startDate = dbQueryParam.createdAt
+      }
+      const queryResult = await this.aggregateEvent(query, skip, docLimit);
+      const queryCount = await this.mongoService.events.count(query);
+      const extraData: IPagination = ResponseExtraData(
+        req,
+        queryResult.length,
+        queryCount,
+      );
+
+      return {
+        status: 'success',
+        data: queryResult,
+        extraData: extraData,
+      };
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  async getOneEvent(query: Record<string, any>): Promise<Event> {
+    try {
+      const result = await this.aggregateEvent(query);
+      if (result.length === 0) {
+        return Promise.reject({
+          ...responseHash.notFound,
+          message: 'Event not found',
+        });
+      }
+      return result[0];
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  async createTicket(data : CreateTicketDTO , user : User , eventId:string) {
+    try {
+        const {title} = data 
+        const lowerTitle = title.toLocaleLowerCase()
+        const event = await this.getOneEvent({_id : new Types.ObjectId(eventId)}) 
+
+        if(user.userType !== "admin" && String(event.ownerId) !== String(user._id)){
+            return Promise.reject({
+                ...responseHash.forbiddenAction 
+            })
+        }
+        const isReadyTicket = await this.getTicket({
+          eventId : new Types.ObjectId(eventId),
+          title : lowerTitle
+        })
+      
+        if(isReadyTicket){
+          return Promise.reject({
+            ...responseHash.badPayload,
+            message : "A ticket with the same name for the same event exists"
+          })
+        }
+        data.eventId = event._id 
+        data.ownerId = event.ownerId 
+        return await this.mongoService.tickets.create(data)
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  async getTicket(query : _FilterQuery<Ticket>) {
+    try {
+        return this.mongoService.tickets.getOneWithAllFields(query)
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  async listTickets() {
+    try {
+        const extraData : any = []
+        return {
+          data  :[] , 
+          extraData 
+        }
     } catch (err) {
       return Promise.reject(err);
     }

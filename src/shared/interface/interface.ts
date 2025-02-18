@@ -42,6 +42,7 @@ export interface ILoginResponse {
   lastName: string;
   token: string;
   profileImageUrl: string | null;
+  userType  : string
 }
 
 export interface IHttpQueryParser {

@@ -68,6 +68,7 @@ export class AuthService {
       firstName,
       lastName,
       profileImageUrl,
+      userType
     } = user;
     return {
       userId,
@@ -76,6 +77,7 @@ export class AuthService {
       email,
       token,
       profileImageUrl : profileImageUrl || "",
+      userType
     };
   }
 

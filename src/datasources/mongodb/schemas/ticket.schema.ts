@@ -9,7 +9,9 @@ export class Ticket extends Document {
   @Prop({ type: Types.ObjectId, ref: 'users' })
   ownerId: Types.ObjectId;
 
-  @Prop()
+  @Prop({
+    lowercase: true
+  })
   title: string;
 
   @Prop({
@@ -29,25 +31,24 @@ export class Ticket extends Document {
   discountAmount: number;
 
   @Prop({
-    default: 500,
+    required  :true
   })
-  quanity: number;
+  quantity: number;
 
   @Prop()
-  comment: string;
+  description: string;
 
   @Prop()
   email: string;
 
-  @Prop({
-    default: 0,
-  })
+  @Prop()
   bookedSlots: number;
 
-  @Prop({
-    default: 0,
-  })
+  @Prop()
   availableSlots: number;
+
+  @Prop()
+  orderLimit: number;
 }
 
 export type TicketDocument = HydratedDocument<Ticket>;

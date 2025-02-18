@@ -22,6 +22,14 @@ export const addEventSchema = joi
         'string.empty': validationMessages('title').empty,
         'any.only': validationMessages('title').only,
       }),
+    eventType: joi
+      .string()
+      .valid("free" , "paid")
+      .optional()
+      .messages({
+        'string.empty': validationMessages('title').empty,
+        'any.only': validationMessages('title').only,
+      }),
     venue: joi
       .string()
       .required()
@@ -68,7 +76,7 @@ export const addEventSchema = joi
       }),
     availableSlots: joi
       .number()
-      .required()
+      .optional()
       .messages({
         'string.empty': validationMessages('availableSlots').empty,
         'any.only': validationMessages('availableSlots').only,
@@ -102,74 +110,6 @@ export const addEventSchema = joi
   })
   .options({ stripUnknown: true });
 
-export const addStatsCategorySchema = joi
-  .object({
-    comment: joi
-      .string()
-      .optional()
-      .messages({
-        'string.empty': validationMessages('comment').empty,
-        'any.only': validationMessages('comment').only,
-      }),
-    title: joi
-      .string()
-      .required()
-      .messages({
-        'string.empty': validationMessages('title').empty,
-        'any.only': validationMessages('title').only,
-        'any.required': validationMessages('title').required,
-      }),
-    value: joi
-      .number()
-      .required()
-      .messages({
-        'string.empty': validationMessages('value').empty,
-        'any.only': validationMessages('value').only,
-        'number.base': validationMessages('value').number,
-        'any.required': validationMessages('value').required,
-        'number.min': validationMessages('value').min,
-        'number.positive': validationMessages('value').positive,
-      }),
-  })
-  .options({ stripUnknown: true });
-
-export const addStatsSchema = joi
-  .object({
-    memberId: joi
-      .string()
-      .required()
-      .custom(validateObjectId)
-      .messages({
-        'string.empty': validationMessages('memberId').empty,
-        'any.only': validationMessages('memberId').only,
-        objectId: 'User ID must be a valid MongoDB ObjectId',
-      }),
-    matchId: joi
-      .string()
-      .required()
-      .custom(validateObjectId)
-      .messages({
-        'string.empty': validationMessages('matchId').empty,
-        'any.only': validationMessages('matchId').only,
-      }),
-    statsCategoryId: joi
-      .string()
-      .required()
-      .custom(validateObjectId)
-      .messages({
-        'string.empty': validationMessages('statsCategoryId').empty,
-        'any.only': validationMessages('statsCategoryId').only,
-      }),
-    points: joi
-      .number()
-      .required()
-      .min(0)
-      .messages({
-        'string.empty': validationMessages('points').empty,
-        'any.only': validationMessages('points').only,
-      }),
-  })
-  .options({ stripUnknown: true });
 
 export const signupSchema = joi
   .object({
@@ -410,6 +350,56 @@ export const eventListSchema = joi
         'string.empty': validationMessages('to').empty,
         'any.only': validationMessages('to').only,
         'string.base': validationMessages('to').string,
+      }),
+  })
+  .options({ stripUnknown: true });
+
+
+export const createTicketSchema = joi
+  .object({
+    description: joi
+      .string()
+      .optional()
+      .messages({
+        'string.empty': validationMessages('description').empty,
+        'any.only': validationMessages('description').only,
+      }),
+    title: joi
+      .string()
+      .required()
+      .messages({
+        'string.empty': validationMessages('title').empty,
+        'any.only': validationMessages('title').only,
+      }),
+    price: joi
+      .number()
+      .min(500)
+      .required()
+      .messages({
+        'string.empty': validationMessages('price').empty,
+        'any.only': validationMessages('price').only,
+        'number.base': validationMessages('price').number,
+        'any.required': validationMessages('price').required,
+        'number.min': validationMessages('price').min,
+        'number.positive': validationMessages('price').positive,
+      }),
+    quantity: joi
+      .number()
+      .required()
+      .messages({
+        'string.empty': validationMessages('quantity').empty,
+        'any.only': validationMessages('quantity').only,
+      }),
+    orderLimit: joi
+      .number()
+      .positive()
+      .min(0)
+      .optional()
+      .messages({
+        'string.empty': validationMessages('orderLimit').empty,
+        'any.only': validationMessages('orderLimit').only,
+        'number.min': validationMessages('orderLimit').min,
+        'number.positive': validationMessages('orderLimit').positive,
       }),
   })
   .options({ stripUnknown: true });

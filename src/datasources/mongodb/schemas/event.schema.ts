@@ -18,6 +18,12 @@ export class Event extends Document {
   @Prop()
   title: string;
 
+  @Prop({
+    enum : ["free" , "paid"],
+    default : "free"
+  })
+  eventType: string;
+
   @Prop()
   venue: string;
 
@@ -35,6 +41,9 @@ export class Event extends Document {
   @Prop()
   commentTitle: string;
 
+  @Prop()
+  landmark: string;
+
   @Prop({
     enum: ['pending', 'ongoing' , 'completed' , 'deleted' , 'rejected' , 'cancelled'],
     default: 'pending',
@@ -47,9 +56,7 @@ export class Event extends Document {
   @Prop()
   endDate: Date; 
 
-  @Prop({
-    default :500
-  })
+  @Prop()
   availableSlots: number;
 
   @Prop({
@@ -64,9 +71,7 @@ export class Event extends Document {
   })
   location: { type: string; coordinates: [Number] };
 
-  @Prop({
-    default : 0
-  })
+  @Prop()
   cost: number;
 }
 
