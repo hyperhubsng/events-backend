@@ -70,7 +70,7 @@ export class EventManager {
           quantity : ticket.quantity , 
           amountPaid : ticket.amount , 
           actualAmount : ticket.amount , 
-          tickeId : new Types.ObjectId(ticket.ticketId),
+          ticketId : new Types.ObjectId(ticket.ticketId),
           eventId : ticket.eventId , 
           ownerId : ticket.ownerId,
           phoneNumber,

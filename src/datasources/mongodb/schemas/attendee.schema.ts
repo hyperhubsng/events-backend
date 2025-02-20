@@ -10,7 +10,7 @@ export class Attendee extends Document {
   eventId: Types.ObjectId;
 
   @Prop()
-  tickeId: Types.ObjectId;
+  ticketId: Types.ObjectId;
 
   @Prop()
   email: string;
@@ -59,6 +59,11 @@ export class Attendee extends Document {
 
   @Prop()
   dateUsed: Date;
+
+  @Prop({
+    default  :false
+  })
+  isChecked: boolean;
 }
 
 export type AttendeeDocument = HydratedDocument<Attendee>;

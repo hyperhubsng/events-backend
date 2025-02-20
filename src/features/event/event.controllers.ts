@@ -106,6 +106,15 @@ export class EventsController {
     await this.successResponse.ok(res, req, { data }); 
   }
 
+  @Get("/:eventId/sales-report")
+  async getSalesReport(
+    @Req() req: Request,
+    @Res() res: Response , 
+    @Param("eventId" , new ObjectIdValidationPipe()) eventId : string,
+  ) {
+    const {data , extraData}  = await this.eventService.getSalesReport(eventId,req) ;
+    await this.successResponse.ok(res, req, { data, pagination: extraData }); 
+  }
   
   @PUBLIC()
   @Get(':id')

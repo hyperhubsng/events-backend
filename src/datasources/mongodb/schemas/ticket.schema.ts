@@ -56,13 +56,19 @@ export class Ticket extends Document {
   email: string;
 
   @Prop()
-  bookedSlots: number;
+  quantitySold: number;
 
   @Prop()
-  availableSlots: number;
+  quantityAvailable: number;
 
   @Prop()
   orderLimit: number;
+
+  @Prop()
+  totalAmountSold: number;
+
+  @Prop()
+  totalAmountReceived: number;
 }
 
 export type TicketDocument = HydratedDocument<Ticket>;

@@ -14,6 +14,7 @@ import { Ticket } from '@/datasources/mongodb/schemas/ticket.schema';
 import { PaymentService } from '../payment/payment.service';
 import { AxiosError } from 'axios';
 import { v4 as uuid } from 'uuid';
+import { verifyObjectId } from '@/shared/utils/verify-object-id';
 
 @Injectable()
 export class EventService {
@@ -480,6 +481,139 @@ export class EventService {
           message: 'Unable to make payment now',
         });
       }
+      return Promise.reject(err);
+    }
+  }
+
+  async getSalesReport(eventId: string, req: Request ,  user?:User) {
+    try {
+    
+      const { skip, docLimit , dbQueryParam } = HTTPQueryParser(req.query);
+      const query : Record<string,any> = {
+        eventId : new Types.ObjectId(eventId)
+      }
+      if(dbQueryParam.createdAt){
+        query.createdAt = dbQueryParam.createdAt
+      }
+      if(dbQueryParam.createdAt){
+        query.createdAt = dbQueryParam.createdAt
+      }
+      if(req.query.ticketId){
+        query.ticketId = new Types.ObjectId(eventId)
+      }
+      const statsQuery  : Record<string,any> = {}
+      if(req.query.ticket && req.query.ticket === "all"){
+        statsQuery.eventId = new Types.ObjectId(eventId)
+      }
+      if(req.query.ticket && req.query.ticket !== "all"){
+        const ticketId = req.query.ticket as string
+        verifyObjectId(ticketId)
+        statsQuery._id = new Types.ObjectId(ticketId)
+        query.ticketId = new Types.ObjectId(ticketId)
+      }
+      if(Object.values(statsQuery).length === 0){
+        return Promise.reject({
+          ...responseHash.badPayload , 
+          message  :"Please,provide queries for the stats"
+        })
+      }
+  
+      const queryResult = await this.aggregateEventSales(query, skip, docLimit);
+      const statsQueryResult = await this.getTicketSalesSummary(statsQuery)
+      const queryCount = await this.mongoService.attendees.count(query);
+      const extraData: IPagination = ResponseExtraData(
+        req,
+        queryResult.length,
+        queryCount,
+      );
+
+      return {
+        status: 'success',
+        data: {
+          stats : this.prepareEventStats(statsQueryResult),
+          sales : queryResult,
+        },
+        extraData: extraData,
+      };
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+  private prepareEventStats(statsArray : Record<string,any>[]){
+    if(statsArray.length === 0){
+      return {
+        totalSales: 0,
+        ticketSold: 0,
+        category: 0,
+        totalReceived: 0
+      }
+    }
+    return statsArray[0]
+  }
+  async aggregateEventSales(
+    query: any,
+    skip: number = 0,
+    limit: number = 1000,
+  ) {
+    try {
+      const result = await this.mongoService.attendees.aggregateRecords([
+        {
+          $match: query,
+        },
+        {
+          $skip: skip,
+        },
+        {
+          $limit: limit,
+        },
+        {
+          $sort: {
+            createdAt: -1,
+          },
+        },
+      ]);
+      return result;
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  async getTicketSalesSummary( query : any) {
+    try {
+      let groupId = query.eventId || query._id 
+      const result = await this.mongoService.tickets.aggregateRecords([
+        {
+          $match: query,
+        },
+        {
+          $group : {
+            _id : groupId,
+            totalSales : {
+              $sum : "$totalAmountSold"
+            },
+            ticketSold : {
+              $sum : "$quantitySold"
+            },
+            category : {
+              $count : {}
+            },
+            totalReceived : {
+              $sum : "$totalAmountReceived"
+            }
+          }
+        },
+        {
+          $project : {
+            _id : 0,
+            totalReceived : "$totalReceived",
+            category : "$category",
+            ticketSold : "$ticketSold",
+            totalSales : "$totalSales"
+          }
+        }
+      ]);
+      return result;
+    } catch (err) {
       return Promise.reject(err);
     }
   }
