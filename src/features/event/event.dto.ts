@@ -13,7 +13,8 @@ export class AddEventDTO {
     availableSlot: number;
     coordinates: number[];
     location : any
-    eventType : string
+    eventType : string 
+    images : string[]
 }
 
 export class HttpQueryDTO {

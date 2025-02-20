@@ -1,5 +1,6 @@
 import { SuccessResponse } from '@/shared/response/success-response';
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -9,11 +10,12 @@ import {
   Query,
   Req,
   Res,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { UserDecorator } from '../user/user.decorator';
 import { User } from '@/datasources/mongodb/schemas/user.schema';
-import { AddUserDTO } from '../user/user.dto';
 import { PUBLIC } from '../auth/public.decorator';
 import { EventService } from './event.service';
 import { ObjectIdValidationPipe } from '@/shared/pipes/object-id-pipe';
@@ -21,23 +23,35 @@ import { Types } from 'mongoose';
 import { AddEventDTO, CreateTicketDTO, HttpQueryDTO, PurchaseTicketDTO } from './event.dto';
 import { AddEventPipe, CreateTicketPipe, EventQueryPipe, PurchaseTicketPipe } from './event.pipe';
 import { PaymentService } from '../payment/payment.service';
+import {  FilesInterceptor } from '@nestjs/platform-express';
+import * as multer from 'multer';
+
+const FILE_SIZE_LIMIT = 1000*1000*2
+const MAX_FILES = 5;
 
 @Controller('events')
 export class EventsController {
   constructor(
     private readonly successResponse: SuccessResponse,
     private readonly eventService : EventService ,
-    private readonly paymentService : PaymentService
+    private readonly paymentService : PaymentService,
   ) {}
 
   @Post()
+  @UseInterceptors(FilesInterceptor('files' , MAX_FILES  , {
+    storage :  multer.memoryStorage()
+  }))
   async createEvent(
     @Req() req: Request,
     @Res() res: Response,
     @Body(new AddEventPipe()) body : AddEventDTO , 
+    @UploadedFiles() files: Array<Express.Multer.File>,
     @UserDecorator() user: User,
   ) {
-    const data = await this.eventService.addEvent(body , user)
+    if (!files || files.length === 0 ) {
+      throw new BadRequestException('Upload a file ');
+    }
+    const data = await this.eventService.addEvent(files , body , user)
     await this.successResponse.ok(res, req, { data  });
   }
 

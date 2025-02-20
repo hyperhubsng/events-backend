@@ -41,6 +41,7 @@ import {
 import { Ticket , TicketSchema } from '@/datasources/mongodb/schemas/ticket.schema';
 import { EventsController } from './event/event.controllers';
 import { EventService } from './event/event.service';
+import { S3Service } from './s3/s3.service';
 
 @Module({
   controllers: [
@@ -70,7 +71,8 @@ import { EventService } from './event/event.service';
     UserService,
     PaymentService,
     EventManager,
-    EventService
+    EventService,
+    S3Service
   ],
   imports: [
     MongooseModule.forFeature(

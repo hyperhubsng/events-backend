@@ -59,27 +59,38 @@ export class EventManager {
   }
 
   private async insertAttendee(data : IAttendee) {
+    let doesNotHaveError = true 
+    const {tickets , firstName , lastName , email , phoneNumber} = data 
+    let attendeeData : Partial<Attendee>[] = []
+    for(const ticket of tickets){
+      attendeeData.push({
+        firstName, 
+        lastName,
+        email,
+        quantity : ticket.quantity , 
+        amountPaid : ticket.amount , 
+        actualAmount : ticket.amount , 
+        ticketId : new Types.ObjectId(ticket.ticketId),
+        eventId : ticket.eventId , 
+        ownerId : ticket.ownerId,
+        phoneNumber,
+        title : ticket.title
+      })
+    }
     try{
-      const {tickets , firstName , lastName , email , phoneNumber} = data 
-      let attendeeData : Partial<Attendee>[] = []
-      for(const ticket of tickets){
-        attendeeData.push({
-          firstName, 
-          lastName,
-          email,
-          quantity : ticket.quantity , 
-          amountPaid : ticket.amount , 
-          actualAmount : ticket.amount , 
-          ticketId : new Types.ObjectId(ticket.ticketId),
-          eventId : ticket.eventId , 
-          ownerId : ticket.ownerId,
-          phoneNumber,
-          title : ticket.title
-        })
-      }
       return await this.mongoService.attendees.createMany(attendeeData)
     }catch(error){
+      doesNotHaveError = false 
       return 
+    }finally{
+      if(doesNotHaveError){
+        //Update the Ticket 
+        // Increment the quantitySold by quantity bought 
+        //Increment the  totalAmount Sold by the the amountPaid 
+        //Deduct or reduce the quantityAvailable by quantity bought 
+        // If quantityAvailable is zero, set the isAvailable 
+        // field to false 
+      }
     }
   }
 }

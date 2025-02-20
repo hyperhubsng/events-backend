@@ -39,6 +39,9 @@ export class Event extends Document {
   comment: string;
 
   @Prop()
+  images: [string];
+
+  @Prop()
   commentTitle: string;
 
   @Prop()

@@ -15,15 +15,17 @@ import { PaymentService } from '../payment/payment.service';
 import { AxiosError } from 'axios';
 import { v4 as uuid } from 'uuid';
 import { verifyObjectId } from '@/shared/utils/verify-object-id';
+import { S3Service } from '../s3/s3.service';
 
 @Injectable()
 export class EventService {
   constructor(
     private readonly mongoService: MongoDataServices,
     private readonly userService: UserService,
-    private readonly paymentService : PaymentService
+    private readonly paymentService : PaymentService , 
+    private readonly s3Service : S3Service
   ) {}
-  async addEvent(data : AddEventDTO , user : User) {
+  async addEvent(files: Array<Express.Multer.File>, data : AddEventDTO , user : User) {
     try {
         const {ownerId , coordinates} = data 
         if(user.userType === "admin" && !ownerId){
@@ -33,8 +35,11 @@ export class EventService {
             })
         }
         await this.userService.rejectUserTyype(ownerId , "admin")
+        const filePromises = files.map(file => this.s3Service.putObject(`${uuid()}-${file.originalname}` , file.buffer))
+        const fileUrls = await Promise.all(filePromises)
         data.createdBy = user._id 
         data.ownerId = new Types.ObjectId(ownerId)
+        data.images = fileUrls
         if(coordinates){
             data.location = {
                 coordinates 
@@ -43,6 +48,29 @@ export class EventService {
         return await this.mongoService.events.create(data as unknown as Partial<Event>)
     } catch (err) {
       return Promise.reject(err);
+    }
+  }
+
+  async uploadDisco(
+    req: Request,
+    files: Array<Express.Multer.File>
+  ) {
+    let errorFileTracker 
+    let hasError = false 
+    try {
+      //const newFileName = `${uuidv4()}-${originalname}`;
+      const filePromises = files.map(file => this.s3Service.putObject(file.originalname , file.buffer))
+      const fileUrls = await Promise.all(filePromises)
+      errorFileTracker = fileUrls 
+      return fileUrls
+    } catch (err) {
+      hasError = true 
+      return Promise.reject(err);
+    }finally{
+      //If there is an error , delete the files 
+      if(hasError){
+        //delete the files 
+      }
     }
   }
 

@@ -42,3 +42,4 @@ export class PurchaseTicketPipe implements PipeTransform {
     return pipeTransformer<PurchaseTicketDTO>(value, purchaseTicketSchema);
   }
 }
+

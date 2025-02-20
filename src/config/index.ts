@@ -3,6 +3,16 @@ import * as path from 'path';
 import * as winston from 'winston';
 import * as fs from 'fs';
 
+import { S3Client } from '@aws-sdk/client-s3';
+import { fromEnv } from '@aws-sdk/credential-providers';
+
+export const s3Client = new S3Client({
+  credentials: fromEnv(),
+  region: process.env.AWS_REGION as string,
+});
+
+
+
 const folderName = path.join(__dirname, '../../app_log/');
 if (!fs.existsSync(folderName)) {
   fs.mkdirSync(folderName);
@@ -51,6 +61,10 @@ export const appConfig = {
     verificationURL: process.env.PAYSTACK_VERIFICATION_URL as string,
   },
   serverPort: 3000,
+  aws: {
+    bucketName: process.env.AWS_BUCKET as string,
+    region: process.env.AWS_REGION as string,
+  }
 };
 
 export const mongooseConfig: any = {
