@@ -73,3 +73,25 @@ export class Ticket extends Document {
 
 export type TicketDocument = HydratedDocument<Ticket>;
 export const TicketSchema = SchemaFactory.createForClass(Ticket);
+
+
+TicketSchema.pre('findOneAndUpdate', async function (next) {
+  try {
+    const update = this.getUpdate();
+    const filter = this.getQuery();
+    const existingDoc = await this.model.findOne(filter).lean();
+    if (update && typeof update === 'object' && !Array.isArray(update)) {
+      const updateQuery = update as Record<string, any>;
+      if (updateQuery.$inc.quantityAvailable) {
+        const newQuantityAvailable =  existingDoc.quantityAvailable +  updateQuery.$inc.quantityAvailable;
+        if(newQuantityAvailable === 0){
+          updateQuery.isAvailable = false
+          this.setUpdate(updateQuery);
+        }
+      }
+    }
+    return next();
+  } catch (error: any) {
+    return next(error);
+  }
+});

@@ -26,7 +26,6 @@ import { PaymentService } from '../payment/payment.service';
 import {  FilesInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 
-const FILE_SIZE_LIMIT = 1000*1000*2
 const MAX_FILES = 5;
 
 @Controller('events')

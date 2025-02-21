@@ -69,6 +69,7 @@ export class PaymentService {
 
   async runPaystackCallback(req: Request) {
     try {
+      
       const paymentReference = req.query.reference as string;
       const paymentFactory = new PaymentFactory();
       const paystack = paymentFactory.getProcessor('paystack');
@@ -124,6 +125,7 @@ export class PaymentService {
       return 'Payment completed. We will send value once confirmed';
     } catch (err) {
       //Log any failed processing for further retry
+      console.log(err)
       return Promise.reject(err);
     }
   }

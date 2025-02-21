@@ -441,7 +441,7 @@ export class EventService {
       };
       const event = await this.getOneEvent(query)
 
-      const totalCharges : number  = charges.reduce((a , b) => a + b.amount , 0)
+      const totalCharges : number  = charges ? charges.reduce((a , b) => a + b.amount , 0) : 0
      
       let totalAmount = 0
       for(const ticket of tickets){
@@ -453,6 +453,12 @@ export class EventService {
             message  :`Tickets you selected were not found`
           })
         }
+        if(t.quantityAvailable === 0){
+          return Promise.reject({
+            ...responseHash.notFound,
+            message : "Sold out"
+          })
+        }
         if(!t.isAvailable){
           return Promise.reject({
             ...responseHash.badPayload , 
@@ -460,10 +466,10 @@ export class EventService {
           })
         }
         //Confirm that the ticket is still available 
-        if(ticket.quantity > t.quantity){
+        if(ticket.quantity > t.orderLimit){
           return Promise.reject({
             ...responseHash.badPayload , 
-            message  :`You can only purchase ${t.quantity} tickets of ${t.title}`
+            message  :`You can only purchase ${t.orderLimit} tickets of ${t.title}. ${t.quantityAvailable} tickets still available  `
           })
         }
         

@@ -37,7 +37,7 @@ export class EventManager {
   private insertPayment(body: IPaymentData) {
     const {charges , tickets} = body 
     const payments : Partial<Payment>[] = []
-    if(charges.length > 0){
+    if(charges && charges.length > 0){
       payments.push({
         ...body , 
         amount : charges.reduce((a , b) => a + b.amount , 0) , 
@@ -84,12 +84,18 @@ export class EventManager {
       return 
     }finally{
       if(doesNotHaveError){
-        //Update the Ticket 
-        // Increment the quantitySold by quantity bought 
-        //Increment the  totalAmount Sold by the the amountPaid 
-        //Deduct or reduce the quantityAvailable by quantity bought 
-        // If quantityAvailable is zero, set the isAvailable 
-        // field to false 
+        const {tickets} = data 
+        for(const ticket of tickets){
+          await this.mongoService.tickets.updateOneOrCreateWithOldData({
+            _id : ticket.ticketId
+          } , {
+            $inc : {
+              quantitySold : ticket.quantity , 
+              quantityAvailable : -ticket.quantity , 
+              totalAmountSold : ticket.amount
+            }
+          })
+        }
       }
     }
   }
