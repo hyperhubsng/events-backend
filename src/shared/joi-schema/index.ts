@@ -125,6 +125,15 @@ export const signupSchema = joi
         'any.required': validationMessages('email').required,
         'any.only': validationMessages('email').only,
       }),
+    userType: joi
+      .string()
+      .valid("vendor")
+      .optional()
+      .messages({
+        'string.empty': validationMessages('userType').empty,
+        'any.required': validationMessages('userType').required,
+        'any.only': validationMessages('userType').only,
+      }),
     password: joi
       .string()
       .min(8)
