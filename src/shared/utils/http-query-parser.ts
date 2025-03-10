@@ -4,19 +4,10 @@
  * @return {Object}
  */
 
-import { IHttpQueryParser } from '../interface/interface';
+import { IHttpQueryParser } from "../interface/interface";
 
 const HTTPQueryParser = (obj: Record<string, any>): IHttpQueryParser => {
-  const {
-    page,
-    select,
-    limit,
-    from,
-    to,
-    populate,
-    status,
-    sort,
-  } = obj;
+  const { page, select, limit, from, to, populate, status, sort } = obj;
   const pageNumber = Math.abs(parseInt(page)) || 1;
   const docLimit = parseInt(limit) || 25;
   const skip = docLimit * (pageNumber - 1);
@@ -25,11 +16,11 @@ const HTTPQueryParser = (obj: Record<string, any>): IHttpQueryParser => {
   const dbQueryParam: Record<string, any> = {};
 
   if (select) {
-    filters = select.replace(' ', '').split(',');
+    filters = select.replace(" ", "").split(",");
   }
 
   if (populate) {
-    populateFields = populate.replace(' ', ',').split(',');
+    populateFields = populate.replace(" ", ",").split(",");
   }
 
   if (from) {
@@ -55,7 +46,7 @@ const HTTPQueryParser = (obj: Record<string, any>): IHttpQueryParser => {
     page: pageNumber,
     docLimit,
     dbQueryParam,
-    sort: sort || '_id',
+    sort: sort || "_id",
   };
 };
 

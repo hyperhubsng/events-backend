@@ -1,5 +1,5 @@
-import { Paystack } from './paystack';
-import { PaymentProcessor } from './processor.interface';
+import { Paystack } from "./paystack";
+import { PaymentProcessor } from "./processor.interface";
 
 export class PaymentFactory {
   processorRegistry(): Record<string, PaymentProcessor> {
@@ -9,7 +9,7 @@ export class PaymentFactory {
   }
   getProcessor(name: string): PaymentProcessor {
     if (!this.processorRegistry()[name]) {
-      throw new Error('unregistered processor');
+      throw new Error("unregistered processor");
     }
     return this.processorRegistry()[name];
   }

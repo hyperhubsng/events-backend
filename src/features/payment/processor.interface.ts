@@ -1,7 +1,7 @@
 import {
   IPaymentHeaders,
   ITransactionData,
-} from '@/shared/interface/interface';
+} from "@/shared/interface/interface";
 
 export interface IPaymentLinkResponse {
   data: {

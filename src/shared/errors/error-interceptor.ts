@@ -4,11 +4,11 @@ import {
   ExceptionFilter,
   HttpStatus,
   Inject,
-} from '@nestjs/common';
-import { Response } from 'express';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
-import { Logger } from 'winston';
-import { HttpArgumentsHost } from '@nestjs/common/interfaces';
+} from "@nestjs/common";
+import { Response } from "express";
+import { WINSTON_MODULE_PROVIDER } from "nest-winston";
+import { Logger } from "winston";
+import { HttpArgumentsHost } from "@nestjs/common/interfaces";
 
 @Catch()
 export class ErrorInterceptor implements ExceptionFilter {
@@ -22,7 +22,7 @@ export class ErrorInterceptor implements ExceptionFilter {
     const response: Response = ctx.getResponse<Response>();
     const exceptionMessage = exception.response
       ? exception.response.message
-      : 'Internal Server Error';
+      : "Internal Server Error";
     const exceptionStatus = exception.response
       ? exception.response.status
       : HttpStatus.INTERNAL_SERVER_ERROR;
@@ -30,12 +30,12 @@ export class ErrorInterceptor implements ExceptionFilter {
     const status: number = exception.status || exceptionStatus;
     const exceptionErrorCode = exception.response
       ? exception.response.code
-      : 'MELO00100';
+      : "MELO00100";
 
     switch (exception.name) {
-      case 'CustomGuardException':
+      case "CustomGuardException":
         break;
-      case 'AxiosError':
+      case "AxiosError":
         this.logger.error({
           message: message,
           url: exception.config.url,
@@ -52,8 +52,8 @@ export class ErrorInterceptor implements ExceptionFilter {
       exception.code || exceptionErrorCode;
     const statusCode = status || 500;
     response.status(statusCode).json({
-      status: status >= 500 ? 'pending' : 'failed',
-      message: status >= 500 ? 'Oops! something went wrong' : message,
+      status: status >= 500 ? "pending" : "failed",
+      message: status >= 500 ? "Oops! something went wrong" : message,
       code: errorCode,
     });
   }

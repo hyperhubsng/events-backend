@@ -1,11 +1,11 @@
-import { Body, Controller, Get, Param, Put, Req, Res } from '@nestjs/common';
-import { UserService } from './user.service';
-import { SuccessResponse } from '@/shared/response/success-response';
-import { Response, Request } from 'express';
-import { UserDecorator } from './user.decorator';
-import { User } from '@/datasources/mongodb/schemas/user.schema';
+import { Body, Controller, Get, Param, Put, Req, Res } from "@nestjs/common";
+import { UserService } from "./user.service";
+import { SuccessResponse } from "@/shared/response/success-response";
+import { Response, Request } from "express";
+import { UserDecorator } from "./user.decorator";
+import { User } from "@/datasources/mongodb/schemas/user.schema";
 
-@Controller('users')
+@Controller("users")
 export class UserController {
   constructor(
     private readonly userService: UserService,
@@ -20,7 +20,7 @@ export class UserController {
     const { data, extraData } = await this.userService.getUsers(req, user);
     this.successResponse.ok(res, req, { data, pagination: extraData });
   }
-  @Put(':id')
+  @Put(":id")
   async updateProfile(
     @Req() req: Request,
     @Res() res: Response,
@@ -31,11 +31,11 @@ export class UserController {
     this.successResponse.ok(res, req, { data: result });
   }
 
-  @Get(':id')
+  @Get(":id")
   async getUserHandler(
     @Req() req: Request,
     @Res() res: Response,
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     const result = await this.userService.getUser({ _id: id });
     this.successResponse.ok(res, req, { data: result });

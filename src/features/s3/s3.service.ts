@@ -1,15 +1,15 @@
-import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { s3Client, appConfig } from '@/config';
-import { Injectable } from '@nestjs/common';
-import { ErrorService } from '@/shared/errors/errors.service';
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client, appConfig } from "@/config";
+import { Injectable } from "@nestjs/common";
+import { ErrorService } from "@/shared/errors/errors.service";
 
 @Injectable()
 export class S3Service {
   private awsBucket: string;
-  private awsRegion : string 
+  private awsRegion: string;
   constructor(private readonly errorService: ErrorService) {
-    this.awsBucket = appConfig.aws.bucketName; 
-    this.awsRegion = appConfig.aws.region
+    this.awsBucket = appConfig.aws.bucketName;
+    this.awsRegion = appConfig.aws.region;
   }
 
   /**
@@ -18,11 +18,7 @@ export class S3Service {
    * @param {Buffer} fileBody  The file as a Buffer
    * @returns {Object}
    */
-  async putObject(
-    fileName: string,
-    fileBody: Buffer,
-  ): Promise<string> {
- 
+  async putObject(fileName: string, fileBody: Buffer): Promise<string> {
     const params = {
       Bucket: this.awsBucket,
       Key: fileName,
@@ -31,7 +27,7 @@ export class S3Service {
 
     try {
       await s3Client.send(new PutObjectCommand(params));
-      return `https://${this.awsBucket}.s3.${this.awsRegion}.amazonaws.com/${fileName}`
+      return `https://${this.awsBucket}.s3.${this.awsRegion}.amazonaws.com/${fileName}`;
     } catch (e) {
       return this.errorService.serviceError(e);
     }

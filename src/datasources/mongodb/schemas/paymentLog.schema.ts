@@ -1,6 +1,6 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { object } from 'joi';
-import { Document, HydratedDocument } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { object } from "joi";
+import { Document, HydratedDocument } from "mongoose";
 
 @Schema({ timestamps: true })
 export class PaymentLog extends Document {
@@ -11,17 +11,17 @@ export class PaymentLog extends Document {
   amount: number;
 
   @Prop({
-    default: 'pending',
+    default: "pending",
   })
   status: string;
   @Prop({
-    enum: ['paystack', 'monnify', 'flutterwave'],
+    enum: ["paystack", "monnify", "flutterwave"],
   })
   processor: string;
   @Prop({ default: false })
   hasBeenProcessed: boolean;
   @Prop({
-    default: 'pending',
+    default: "pending",
   })
   providerResponse: string;
 

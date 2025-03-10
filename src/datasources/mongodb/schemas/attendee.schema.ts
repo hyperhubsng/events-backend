@@ -1,5 +1,5 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, HydratedDocument, Types } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Document, HydratedDocument, Types } from "mongoose";
 
 @Schema({ timestamps: true })
 export class Attendee extends Document {
@@ -43,17 +43,17 @@ export class Attendee extends Document {
   amountPaid: number;
 
   @Prop({
-    default:  0
+    default: 0,
   })
   discountValue: number;
-  
+
   @Prop({
-    default  :false
+    default: false,
   })
   usedDiscount: boolean;
-  
+
   @Prop({
-    default  :true
+    default: true,
   })
   isValid: boolean;
 
@@ -61,7 +61,7 @@ export class Attendee extends Document {
   dateUsed: Date;
 
   @Prop({
-    default  :false
+    default: false,
   })
   isChecked: boolean;
 }

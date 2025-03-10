@@ -1,8 +1,8 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, HydratedDocument } from 'mongoose';
-import * as bcrypt from 'bcryptjs';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Document, HydratedDocument } from "mongoose";
+import * as bcrypt from "bcryptjs";
 
-import { appConfig } from '@/config';
+import { appConfig } from "@/config";
 @Schema({ timestamps: true })
 export class User extends Document {
   @Prop({
@@ -31,7 +31,7 @@ export class User extends Document {
   @Prop()
   phoneNumber: string;
   @Prop({
-    default: 'nigeria',
+    default: "nigeria",
   })
   country: string;
 
@@ -47,9 +47,9 @@ export class User extends Document {
   @Prop()
   password: string;
 
-  @Prop({ 
-    enum : ["admin" , "vendor"],
-    default : "vendor"
+  @Prop({
+    enum: ["admin", "vendor"],
+    default: "vendor",
   })
   userType: string;
 }
@@ -57,9 +57,9 @@ export class User extends Document {
 export const UserSchema = SchemaFactory.createForClass(User);
 export type UserDocument = HydratedDocument<User>;
 
-UserSchema.pre('save', async function (next) {
+UserSchema.pre("save", async function (next) {
   try {
-    if (!this.isModified('password')) {
+    if (!this.isModified("password")) {
       return next();
     }
     const salt = await bcrypt.genSalt(appConfig.saltFactor);
@@ -70,10 +70,10 @@ UserSchema.pre('save', async function (next) {
   }
 });
 
-UserSchema.pre('findOneAndUpdate', async function (next) {
+UserSchema.pre("findOneAndUpdate", async function (next) {
   try {
     const update = this.getUpdate();
-    if (update && typeof update === 'object' && !Array.isArray(update)) {
+    if (update && typeof update === "object" && !Array.isArray(update)) {
       const updateQuery = update as Record<string, any>;
       if (updateQuery.password) {
         const salt = await bcrypt.genSalt(appConfig.saltFactor);

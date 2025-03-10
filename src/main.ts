@@ -1,10 +1,10 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import helmet from 'helmet';
-import * as useragent from 'express-useragent';
-import * as compression from 'compression';
-import { NotFoundFilter } from './not-found.filter';
-import { appConfig } from './config';
+import { NestFactory } from "@nestjs/core";
+import { AppModule } from "./app.module";
+import helmet from "helmet";
+import * as useragent from "express-useragent";
+import * as compression from "compression";
+import { NotFoundFilter } from "./not-found.filter";
+import { appConfig } from "./config";
 
 (async function bootstrap() {
   const app = await NestFactory.create(AppModule);

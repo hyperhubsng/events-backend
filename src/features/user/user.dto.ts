@@ -4,6 +4,6 @@ export class AddUserDTO {
   firstName: string;
   lastName: string;
   phoneNumber: string;
-  companyName : string ;
-  website : string ;
+  companyName: string;
+  website: string;
 }

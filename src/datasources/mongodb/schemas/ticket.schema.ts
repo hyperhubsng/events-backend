@@ -1,16 +1,16 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, HydratedDocument, Types } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Document, HydratedDocument, Types } from "mongoose";
 
 @Schema({ timestamps: true })
 export class Ticket extends Document {
-  @Prop({ type: Types.ObjectId, ref: 'events' })
+  @Prop({ type: Types.ObjectId, ref: "events" })
   eventId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'users' })
+  @Prop({ type: Types.ObjectId, ref: "users" })
   ownerId: Types.ObjectId;
 
   @Prop({
-    lowercase: true
+    lowercase: true,
   })
   title: string;
 
@@ -25,7 +25,7 @@ export class Ticket extends Document {
   hasDiscount: boolean;
 
   @Prop({
-    enum : ["flat" , "percent"]
+    enum: ["flat", "percent"],
   })
   discountType: string;
 
@@ -45,7 +45,7 @@ export class Ticket extends Document {
   discountAmount: number;
 
   @Prop({
-    required  :true
+    required: true,
   })
   quantity: number;
 
@@ -74,18 +74,18 @@ export class Ticket extends Document {
 export type TicketDocument = HydratedDocument<Ticket>;
 export const TicketSchema = SchemaFactory.createForClass(Ticket);
 
-
-TicketSchema.pre('findOneAndUpdate', async function (next) {
+TicketSchema.pre("findOneAndUpdate", async function (next) {
   try {
     const update = this.getUpdate();
     const filter = this.getQuery();
     const existingDoc = await this.model.findOne(filter).lean();
-    if (update && typeof update === 'object' && !Array.isArray(update)) {
+    if (update && typeof update === "object" && !Array.isArray(update)) {
       const updateQuery = update as Record<string, any>;
       if (updateQuery.$inc.quantityAvailable) {
-        const newQuantityAvailable =  existingDoc.quantityAvailable +  updateQuery.$inc.quantityAvailable;
-        if(newQuantityAvailable === 0){
-          updateQuery.isAvailable = false
+        const newQuantityAvailable =
+          existingDoc.quantityAvailable + updateQuery.$inc.quantityAvailable;
+        if (newQuantityAvailable === 0) {
+          updateQuery.isAvailable = false;
           this.setUpdate(updateQuery);
         }
       }

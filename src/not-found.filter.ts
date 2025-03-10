@@ -3,9 +3,9 @@ import {
   Catch,
   NotFoundException,
   ArgumentsHost,
-} from '@nestjs/common';
-import { Response } from 'express';
-import { responseHash } from '@/constants';
+} from "@nestjs/common";
+import { Response } from "express";
+import { responseHash } from "@/constants";
 
 @Catch(NotFoundException)
 export class NotFoundFilter implements ExceptionFilter {
@@ -15,7 +15,7 @@ export class NotFoundFilter implements ExceptionFilter {
 
     const responsePayload = responseHash.pageNotFound;
     response.status(404).json({
-      status: 'failed',
+      status: "failed",
       ...(responsePayload && { message: responsePayload.message }),
       ...(responsePayload && { code: responsePayload.code }),
     });

@@ -1,19 +1,17 @@
-import 'dotenv/config';
-import * as path from 'path';
-import * as winston from 'winston';
-import * as fs from 'fs';
+import "dotenv/config";
+import * as path from "path";
+import * as winston from "winston";
+import * as fs from "fs";
 
-import { S3Client } from '@aws-sdk/client-s3';
-import { fromEnv } from '@aws-sdk/credential-providers';
+import { S3Client } from "@aws-sdk/client-s3";
+import { fromEnv } from "@aws-sdk/credential-providers";
 
 export const s3Client = new S3Client({
   credentials: fromEnv(),
   region: process.env.AWS_REGION as string,
 });
 
-
-
-const folderName = path.join(__dirname, '../../app_log/');
+const folderName = path.join(__dirname, "../../app_log/");
 if (!fs.existsSync(folderName)) {
   fs.mkdirSync(folderName);
 }
@@ -34,9 +32,9 @@ export const logFile: {
   maxFiles: string;
 } = {
   dirname: folderName,
-  filename: '%DATE%.log',
-  maxFiles: '1d',
-  level: 'error',
+  filename: "%DATE%.log",
+  maxFiles: "1d",
+  level: "error",
   format: logFormat(timestamp, prettyPrint),
 };
 
@@ -46,12 +44,12 @@ export const appConfig = {
   jwtAudience: process.env.JWT_AUDIENCE,
   jwtIssuer: process.env.JWT_ISSUER,
   smsOTPExpiration: 2,
-  isProduction: process.env.NODE_ENV === 'production',
+  isProduction: process.env.NODE_ENV === "production",
   saltFactor: 10,
-  realOTP: (process.env.REAL_OTP as string) || '0',
+  realOTP: (process.env.REAL_OTP as string) || "0",
   isLive: process.env.REAL_OTP as string,
   devOTP: process.env.DEV_OTP,
-  tempUserKeyPrefix: 'temp:user:',
+  tempUserKeyPrefix: "temp:user:",
   otpDuration: Number(process.env.REAL_OTP_DURATION) || 120,
   paystack: {
     publicKey: process.env.PAYSTACK_PUBLIC_KEY as string,
@@ -64,14 +62,14 @@ export const appConfig = {
   aws: {
     bucketName: process.env.AWS_BUCKET as string,
     region: process.env.AWS_REGION as string,
-  }
+  },
 };
 
 export const mongooseConfig: any = {
   connectionString: {
-    organisation: process.env.MONGOLAB_URL + '?retryWrites=false',
+    organisation: process.env.MONGOLAB_URL + "?retryWrites=false",
   },
   organisation: {
-    connectionName: 'hyperhubs',
+    connectionName: "hyperhubs",
   },
 };

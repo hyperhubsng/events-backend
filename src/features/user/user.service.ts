@@ -1,14 +1,14 @@
-import { MongoDataServices } from '@/datasources/mongodb/mongodb.service';
-import { Injectable } from '@nestjs/common';
-import { AddUserDTO } from '@/features/user/user.dto';
-import { User } from '@/datasources/mongodb/schemas/user.schema';
-import { getTempUserKey, responseHash } from '@/constants';
-import { Types, _FilterQuery } from 'mongoose';
-import { Request } from 'express';
-import HTTPQueryParser from '@/shared/utils/http-query-parser';
-import { IPagination } from '@/shared/interface/interface';
-import { ResponseExtraData } from '@/shared/utils/http-response-extra-data';
-import { RedisService } from '@/datasources/redis/redis.service';
+import { MongoDataServices } from "@/datasources/mongodb/mongodb.service";
+import { Injectable } from "@nestjs/common";
+import { AddUserDTO } from "@/features/user/user.dto";
+import { User } from "@/datasources/mongodb/schemas/user.schema";
+import { getTempUserKey, responseHash } from "@/constants";
+import { Types, _FilterQuery } from "mongoose";
+import { Request } from "express";
+import HTTPQueryParser from "@/shared/utils/http-query-parser";
+import { IPagination } from "@/shared/interface/interface";
+import { ResponseExtraData } from "@/shared/utils/http-response-extra-data";
+import { RedisService } from "@/datasources/redis/redis.service";
 
 @Injectable()
 export class UserService {
@@ -25,17 +25,20 @@ export class UserService {
     }
   }
 
-  async rejectUserTyype(userId : string  | Types.ObjectId, category : string): Promise<void> {
+  async rejectUserTyype(
+    userId: string | Types.ObjectId,
+    category: string,
+  ): Promise<void> {
     try {
-      const user = await this.getUser({_id : userId})
-      if(!user){
+      const user = await this.getUser({ _id: userId });
+      if (!user) {
         return Promise.reject({
           ...responseHash.notFound,
-          message : "user not found"
-        })
+          message: "user not found",
+        });
       }
-      if(user.userType === category){
-        return Promise.reject(responseHash.forbiddenAction)
+      if (user.userType === category) {
+        return Promise.reject(responseHash.forbiddenAction);
       }
     } catch (e) {
       return Promise.reject(e);
@@ -44,7 +47,7 @@ export class UserService {
   async checkForExistingUser(queryParam: Record<string, any>[]): Promise<void> {
     const user: any = await this.mongoService.users.getOne(
       { $or: queryParam },
-      ['email'],
+      ["email"],
     );
     if (user) {
       return Promise.reject(responseHash.duplicateExists);
@@ -87,7 +90,7 @@ export class UserService {
       if (req.query.q) {
         query = {
           ...query,
-          brandName: new RegExp(`^${req.query.q}$`, 'i'),
+          brandName: new RegExp(`^${req.query.q}$`, "i"),
         };
       }
 
@@ -97,7 +100,7 @@ export class UserService {
         populate,
         docLimit,
         skip,
-        'createdAt',
+        "createdAt",
       );
 
       const userCount = await this.mongoService.users.count(query);
@@ -108,7 +111,7 @@ export class UserService {
       );
 
       return {
-        status: 'success',
+        status: "success",
         data: users,
         extraData: extraData,
       };

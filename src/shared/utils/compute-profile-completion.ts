@@ -8,8 +8,8 @@ export const computeProfileCompletionStatus = (...args: any[]): number => {
 
 export const stringnifyPercent = (percent: number): string => {
   return percent === 100
-    ? 'Completed'
+    ? "Completed"
     : percent !== 0
-      ? `${percent}%`
-      : 'Pending';
+    ? `${percent}%`
+    : "Pending";
 };

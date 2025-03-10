@@ -1,12 +1,12 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, HydratedDocument, Types } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Document, HydratedDocument, Types } from "mongoose";
 
 @Schema({ timestamps: true })
 export class Event extends Document {
-  @Prop({ type: Types.ObjectId, ref: 'users' })
+  @Prop({ type: Types.ObjectId, ref: "users" })
   ownerId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'users' })
+  @Prop({ type: Types.ObjectId, ref: "users" })
   createdBy: Types.ObjectId;
 
   @Prop()
@@ -19,8 +19,8 @@ export class Event extends Document {
   title: string;
 
   @Prop({
-    enum : ["free" , "paid"],
-    default : "free"
+    enum: ["free", "paid"],
+    default: "free",
   })
   eventType: string;
 
@@ -28,7 +28,7 @@ export class Event extends Document {
   venue: string;
 
   @Prop({
-    default : "https://images.com/fake-image.jpeg"
+    default: "https://images.com/fake-image.jpeg",
   })
   bannerUrl: string;
 
@@ -48,8 +48,16 @@ export class Event extends Document {
   landmark: string;
 
   @Prop({
-    enum: ['pending', 'ongoing' , 'completed' , 'deleted' , 'rejected' , 'cancelled'],
-    default: 'pending',
+    enum: [
+      "pending",
+      "ongoing",
+      "completed",
+      "deleted",
+      "rejected",
+      "cancelled",
+      "upcoming"
+    ],
+    default: "pending",
   })
   status: string;
 
@@ -57,28 +65,33 @@ export class Event extends Document {
   startDate: Date;
 
   @Prop()
-  endDate: Date; 
+  endDate: Date;
 
   @Prop()
   availableSlots: number;
 
   @Prop({
     type: {
-      type: String, 
-      enum: ['Point'], 
-      default: 'Point'
+      type: String,
+      enum: ["Point"],
+      default: "Point",
     },
     coordinates: {
-      type: [Number]
-    }
+      type: [Number],
+    },
   })
-  location: { type: string; coordinates: [Number] };
+  location: { type: string; coordinates: [number] };
 
   @Prop()
   cost: number;
+
+  @Prop({
+    default: false,
+  })
+  hasExtraCharges: boolean;
 }
 
 export type EventDocument = HydratedDocument<Event>;
 export const EventSchema = SchemaFactory.createForClass(Event);
 
-EventSchema.index({location : "2dsphere"})
+EventSchema.index({ location: "2dsphere" });

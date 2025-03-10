@@ -1,24 +1,24 @@
-import { Body, Controller, Post, Req, Res, UsePipes } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { ILoginData } from '@/shared/interface/interface';
-import { SuccessResponse } from '@/shared/response/success-response';
-import { Request, Response } from 'express';
+import { Body, Controller, Post, Req, Res, UsePipes } from "@nestjs/common";
+import { AuthService } from "./auth.service";
+import { ILoginData } from "@/shared/interface/interface";
+import { SuccessResponse } from "@/shared/response/success-response";
+import { Request, Response } from "express";
 import {
   AuthLoginPipe,
   ForgotPasswordPipe,
   SetPasswordPipe,
   SignupPipe,
   VerificationPipe,
-} from './auth.pipe';
+} from "./auth.pipe";
 import {
   AuthVerifyAccountDTO,
   ForgotPasswordDTO,
   SetPasswordDTO,
-} from './auth.dto';
-import { PUBLIC } from './public.decorator';
-import { AddUserDTO } from '../user/user.dto';
+} from "./auth.dto";
+import { PUBLIC } from "./public.decorator";
+import { AddUserDTO } from "../user/user.dto";
 
-@Controller('auth')
+@Controller("auth")
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
@@ -26,7 +26,7 @@ export class AuthController {
   ) {}
 
   @PUBLIC()
-  @Post('/login')
+  @Post("/login")
   async handleLogin(
     @Req() req: Request,
     @Res() res: Response,
@@ -37,7 +37,7 @@ export class AuthController {
   }
 
   @PUBLIC()
-  @Post('/signup')
+  @Post("/signup")
   async signup(
     @Req() req: Request,
     @Res() res: Response,
@@ -48,7 +48,7 @@ export class AuthController {
   }
 
   @PUBLIC()
-  @Post('/verify-signup')
+  @Post("/verify-signup")
   async verifySignup(
     @Req() req: Request,
     @Res() res: Response,
@@ -59,7 +59,7 @@ export class AuthController {
   }
 
   @PUBLIC()
-  @Post('/forgot-password')
+  @Post("/forgot-password")
   async forgotPassword(
     @Req() req: Request,
     @Body(new ForgotPasswordPipe()) body: ForgotPasswordDTO,
@@ -70,18 +70,18 @@ export class AuthController {
   }
 
   @PUBLIC()
-  @Post('/verify-forgot-password')
+  @Post("/verify-forgot-password")
   async verifyResetPassword(
     @Req() req: Request,
     @Res() res: Response,
-    @Body(new VerificationPipe() ) body: AuthVerifyAccountDTO,
+    @Body(new VerificationPipe()) body: AuthVerifyAccountDTO,
   ) {
     const data = await this.authService.verifyResetPassword(body);
     return this.successResponse.ok(res, req, { data });
   }
 
   @PUBLIC()
-  @Post('/set-password')
+  @Post("/set-password")
   async setPassword(
     @Req() req: Request,
     @Res() res: Response,

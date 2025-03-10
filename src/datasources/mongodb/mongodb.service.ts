@@ -1,29 +1,29 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import * as mongoose from 'mongoose';
-import { Model, PipelineStage } from 'mongoose';
-import { User, UserDocument } from '@/datasources/mongodb/schemas/user.schema';
+import { Injectable, OnApplicationBootstrap } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import * as mongoose from "mongoose";
+import { Model, PipelineStage } from "mongoose";
+import { User, UserDocument } from "@/datasources/mongodb/schemas/user.schema";
 import {
   Payment,
   PaymentDocument,
-} from '@/datasources/mongodb/schemas/payment.schema';
+} from "@/datasources/mongodb/schemas/payment.schema";
 import {
   PaymentLog,
   PaymentLogDocument,
-} from '@/datasources/mongodb/schemas/paymentLog.schema';
+} from "@/datasources/mongodb/schemas/paymentLog.schema";
 
 import {
-  Event , 
-  EventDocument
-} from '@/datasources/mongodb/schemas/event.schema';
+  Event,
+  EventDocument,
+} from "@/datasources/mongodb/schemas/event.schema";
 import {
-  Attendee , 
-  AttendeeDocument
-} from '@/datasources/mongodb/schemas/attendee.schema';
+  Attendee,
+  AttendeeDocument,
+} from "@/datasources/mongodb/schemas/attendee.schema";
 import {
   Ticket,
-  TicketDocument
-} from '@/datasources/mongodb/schemas/ticket.schema';
+  TicketDocument,
+} from "@/datasources/mongodb/schemas/ticket.schema";
 interface IMatch {
   $match: Record<string, any>;
 }
@@ -177,7 +177,7 @@ export class MongoGenericRepository<T> implements IGenericRepository<T> {
     populate?: string[],
   ): Promise<any> {
     return this._repository
-      .findOne(item, 'body')
+      .findOne(item, "body")
       .populate(populate ? populate : this._populateOnFind)
       .select(projection)
       .exec();
@@ -280,8 +280,8 @@ export class MongoGenericRepository<T> implements IGenericRepository<T> {
 
   search(query: string, limit: number = 10, skip: number = 0): Promise<T[]> {
     return this._repository
-      .find({ $text: { $search: query } }, { score: { $meta: 'textScore' } })
-      .sort({ score: { $meta: 'textScore' } })
+      .find({ $text: { $search: query } }, { score: { $meta: "textScore" } })
+      .sort({ score: { $meta: "textScore" } })
       .limit(limit)
       .skip(skip)
       .exec();
@@ -304,7 +304,7 @@ export abstract class MongoDataServices {
   abstract users: IGenericRepository<User>;
   abstract payments: IGenericRepository<Payment>;
   abstract paymentLogs: IGenericRepository<PaymentLog>;
-  abstract  events: IGenericRepository<Event>;
+  abstract events: IGenericRepository<Event>;
   abstract tickets: IGenericRepository<Ticket>;
   abstract attendees: IGenericRepository<Attendee>;
 }
@@ -318,17 +318,17 @@ export class NosqlService implements MongoDataServices, OnApplicationBootstrap {
   tickets: MongoGenericRepository<Ticket>;
   attendees: MongoGenericRepository<Attendee>;
   constructor(
-    @InjectModel(User.name, 'hyperhubs')
+    @InjectModel(User.name, "hyperhubs")
     private UserRepository: Model<UserDocument>,
-    @InjectModel(Payment.name, 'hyperhubs')
+    @InjectModel(Payment.name, "hyperhubs")
     private PaymentRepository: Model<PaymentDocument>,
-    @InjectModel(PaymentLog.name, 'hyperhubs')
+    @InjectModel(PaymentLog.name, "hyperhubs")
     private PaymentLogRepository: Model<PaymentLogDocument>,
-    @InjectModel(Event.name, 'hyperhubs')
+    @InjectModel(Event.name, "hyperhubs")
     private EventRepository: Model<EventDocument>,
-    @InjectModel(Ticket.name, 'hyperhubs')
+    @InjectModel(Ticket.name, "hyperhubs")
     private TicketRepository: Model<TicketDocument>,
-    @InjectModel(Attendee.name, 'hyperhubs')
+    @InjectModel(Attendee.name, "hyperhubs")
     private AttendeeRepository: Model<AttendeeDocument>,
   ) {}
 
@@ -338,10 +338,10 @@ export class NosqlService implements MongoDataServices, OnApplicationBootstrap {
     this.paymentLogs = new MongoGenericRepository<PaymentLog>(
       this.PaymentLogRepository,
     );
-    this.events = new MongoGenericRepository<Event>(
-      this.EventRepository,
-    );
+    this.events = new MongoGenericRepository<Event>(this.EventRepository);
     this.tickets = new MongoGenericRepository<Ticket>(this.TicketRepository);
-    this.attendees = new MongoGenericRepository<Attendee>(this.AttendeeRepository);
+    this.attendees = new MongoGenericRepository<Attendee>(
+      this.AttendeeRepository,
+    );
   }
 }

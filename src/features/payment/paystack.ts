@@ -1,17 +1,17 @@
 import {
   IPaymentHeaders,
   ITransactionData,
-} from '@/shared/interface/interface';
-import { IPaymentLinkResponse, PaymentProcessor } from './processor.interface';
-import { appConfig } from '@/config';
-import axios, { AxiosHeaders } from 'axios';
-import crypto from 'crypto';
+} from "@/shared/interface/interface";
+import { IPaymentLinkResponse, PaymentProcessor } from "./processor.interface";
+import { appConfig } from "@/config";
+import axios, { AxiosHeaders } from "axios";
+import crypto from "crypto";
 
 export class Paystack implements PaymentProcessor {
   setHeaders(): IPaymentHeaders {
     const headers = {
       Authorization: `Bearer ${appConfig.paystack.secretKey}`,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
     return headers;
   }
@@ -28,7 +28,7 @@ export class Paystack implements PaymentProcessor {
         callback_url: appConfig.paystack.callbackURL,
       };
       const request = await axios({
-        method: 'post',
+        method: "post",
         url: paystackPaymentUrl,
         headers: this.setHeaders() as unknown as AxiosHeaders,
         data: paymentData,
@@ -53,11 +53,12 @@ export class Paystack implements PaymentProcessor {
 
   async confirmPaymentWithCallback(transactionId: string | number) {
     try {
-      const { data: paystackResponse } =
-        await this.verifyPayment(transactionId);
+      const { data: paystackResponse } = await this.verifyPayment(
+        transactionId,
+      );
       const status = paystackResponse.status;
-      if (!Object.is(status, 'success')) {
-        return Promise.reject('Incomplete payment, please contact support');
+      if (!Object.is(status, "success")) {
+        return Promise.reject("Incomplete payment, please contact support");
       }
       return paystackResponse;
     } catch (err) {
@@ -68,21 +69,21 @@ export class Paystack implements PaymentProcessor {
     try {
       const paystackSecret = appConfig.paystack.secretKey;
       const hash = crypto
-        .createHmac('sha512', paystackSecret)
+        .createHmac("sha512", paystackSecret)
         .update(JSON.stringify(reqBody))
-        .digest('hex');
+        .digest("hex");
 
-      if (!Object.is(hash, reqHeader['x-paystack-signature'])) {
-        return Promise.reject('Unknown Signature');
+      if (!Object.is(hash, reqHeader["x-paystack-signature"])) {
+        return Promise.reject("Unknown Signature");
       }
-      if (!Object.is(reqBody.event, 'charge.success')) {
+      if (!Object.is(reqBody.event, "charge.success")) {
         return;
       }
       const { event } = reqBody;
       const status = event.data.status as string;
       const txRef = event.data.reference as string;
-      if (!Object.is(status, 'success')) {
-        return Promise.reject('Incomplete payment, please contact support');
+      if (!Object.is(status, "success")) {
+        return Promise.reject("Incomplete payment, please contact support");
       }
       const confirmPayment = await this.verifyPayment(txRef);
       if (confirmPayment.status === 400) {

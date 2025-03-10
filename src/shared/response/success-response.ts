@@ -1,8 +1,8 @@
-import { Request, Response } from 'express';
-import { ErrorService } from '../errors/errors.service';
-import { IResponseInterface } from '../interface/interface';
-import { Injectable } from '@nestjs/common';
-import { responseHash } from '@/constants';
+import { Request, Response } from "express";
+import { ErrorService } from "../errors/errors.service";
+import { IResponseInterface } from "../interface/interface";
+import { Injectable } from "@nestjs/common";
+import { responseHash } from "@/constants";
 @Injectable()
 export class SuccessResponse {
   constructor(private readonly errorService: ErrorService) {}
@@ -16,7 +16,7 @@ export class SuccessResponse {
       const { data, cache, pagination } = responseData;
       const message = data.message || responseHash.success.message;
       const response: Record<string, any> = {};
-      if (data.hasOwnProperty('message')) {
+      if (data.hasOwnProperty("message")) {
         delete data.message;
       }
       if (cache) {
@@ -24,7 +24,7 @@ export class SuccessResponse {
         response.response.cached = cache;
       } else {
         response.response = {
-          status: 'success',
+          status: "success",
           data: data,
           message,
           code: responseHash.success.code,
@@ -39,7 +39,7 @@ export class SuccessResponse {
       }
       return res.status(200).json({
         ...response.response,
-        csrfToken: req['csrfToken'],
+        csrfToken: req["csrfToken"],
       });
     } catch (e) {
       return this.errorService.controllerError(e);

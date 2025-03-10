@@ -1,5 +1,5 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, HydratedDocument, Types } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Document, HydratedDocument, Types } from "mongoose";
 
 @Schema({ timestamps: true })
 export class Payment extends Document {
@@ -16,8 +16,8 @@ export class Payment extends Document {
   productTitle: string;
 
   @Prop({
-    enum: ['community', 'platform', 'user', 'member', 'govt'],
-    default: 'community',
+    enum: ["community", "platform", "user", "member", "govt"],
+    default: "community",
   })
   beneficiary: string;
 
@@ -45,23 +45,23 @@ export class Payment extends Document {
   narration: string;
 
   @Prop({
-    enum: ['pending', 'completed'],
+    enum: ["pending", "completed"],
   })
   status: string;
 
   @Prop({
-    enum: ['debit', 'credit'],
+    enum: ["debit", "credit"],
   })
   paymentType: string;
 
   @Prop({
-    enum: ['paystack', 'monnify', 'flutterwave'],
+    enum: ["paystack", "monnify", "flutterwave"],
   })
   processor: string;
 
   @Prop({
-    enum: ['reversal', 'withdrawal', 'topup', 'servicePayment'],
-    default: 'servicePayment',
+    enum: ["reversal", "withdrawal", "topup", "servicePayment"],
+    default: "servicePayment",
   })
   transactionKind: string;
 }

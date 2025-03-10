@@ -1,29 +1,29 @@
-import { Injectable } from '@nestjs/common';
-import { appConfig } from '@/config';
-import { JwtService } from '@nestjs/jwt';
+import { Injectable } from "@nestjs/common";
+import { appConfig } from "@/config";
+import { JwtService } from "@nestjs/jwt";
 import {
   ILoginData,
   ILoginResponse,
   ITemporaryUserResponse,
   JwtUnion,
-} from '@/shared/interface/interface';
-import { UserService } from '../user/user.service';
-import { getTempUserKey, responseHash } from '@/constants';
-import * as bcrypt from 'bcryptjs';
+} from "@/shared/interface/interface";
+import { UserService } from "../user/user.service";
+import { getTempUserKey, responseHash } from "@/constants";
+import * as bcrypt from "bcryptjs";
 import {
   AuthVerifyAccountDTO,
   ForgotPasswordDTO,
   SetPasswordDTO,
-} from './auth.dto';
-import { RedisService } from '@/datasources/redis/redis.service';
-import otpGenerator from '@/shared/utils/otp-generator';
-import { User } from '@/datasources/mongodb/schemas/user.schema';
+} from "./auth.dto";
+import { RedisService } from "@/datasources/redis/redis.service";
+import otpGenerator from "@/shared/utils/otp-generator";
+import { User } from "@/datasources/mongodb/schemas/user.schema";
 import {
   computeProfileCompletionStatus,
   stringnifyPercent,
-} from '@/shared/utils/compute-profile-completion';
-import { AddUserDTO,  } from '../user/user.dto';
-import { v4 as uuid } from 'uuid';
+} from "@/shared/utils/compute-profile-completion";
+import { AddUserDTO } from "../user/user.dto";
+import { v4 as uuid } from "uuid";
 @Injectable()
 export class AuthService {
   jwtAudience = appConfig.jwtAudience;
@@ -68,7 +68,7 @@ export class AuthService {
       firstName,
       lastName,
       profileImageUrl,
-      userType
+      userType,
     } = user;
     return {
       userId,
@@ -76,8 +76,8 @@ export class AuthService {
       lastName,
       email,
       token,
-      profileImageUrl : profileImageUrl || "",
-      userType
+      profileImageUrl: profileImageUrl || "",
+      userType,
     };
   }
 
@@ -101,17 +101,17 @@ export class AuthService {
 
   async storeTemporaryRegistration(
     email: string,
-    userData:  AddUserDTO,
+    userData: AddUserDTO,
   ): Promise<ITemporaryUserResponse> {
     try {
-      const reference = appConfig.isLive ? otpGenerator.generate(6) : '123456';
+      const reference = appConfig.isLive ? otpGenerator.generate(6) : "123456";
       this.promiseToCacheData(email, userData, reference);
       const message = `We sent a 6 digit OTP to ${email}. Verify your account to proceed`;
       return {
         message,
         otpEmail: email,
         expirationTime: this.otpDuration,
-        durationType: 'seconds',
+        durationType: "seconds",
       };
     } catch (e) {
       return Promise.reject(e);
@@ -120,7 +120,7 @@ export class AuthService {
 
   async promiseToCacheData(
     email: string,
-    userData:  AddUserDTO,
+    userData: AddUserDTO,
     reference: string,
   ) {
     try {
@@ -143,14 +143,14 @@ export class AuthService {
     }
   }
 
-  async onboardUser(body: AddUserDTO) : Promise<ITemporaryUserResponse> {
+  async onboardUser(body: AddUserDTO): Promise<ITemporaryUserResponse> {
     try {
-      const { email, phoneNumber , companyName , website } = body;
-      //Check to Uniqueness of Data 
+      const { email, phoneNumber, companyName, website } = body;
+      //Check to Uniqueness of Data
       await this.userService.checkUserUniqueness(
-        [{ email }, { phoneNumber } , {companyName} , {website}],
+        [{ email }, { phoneNumber }, { companyName }, { website }],
         true,
-      ); 
+      );
       return await this.storeTemporaryRegistration(email, body);
     } catch (e) {
       return Promise.reject(e);
@@ -223,15 +223,15 @@ export class AuthService {
   async handleForgotPassword(body: ForgotPasswordDTO) {
     try {
       let { email } = body;
-      email = email.trim().replace(/\s+/g, '');
+      email = email.trim().replace(/\s+/g, "");
       const user = await this.userService.getUser({ email });
       if (!user) {
         return Promise.reject({
           ...responseHash.notFound,
-          message: 'Sorry,try again',
+          message: "Sorry,try again",
         });
       }
-      const token = appConfig.isLive ? otpGenerator.generate(6) : '123456';
+      const token = appConfig.isLive ? otpGenerator.generate(6) : "123456";
       await this.redisService.setEx(
         `verify:reset:password:${email}:${token}`,
         JSON.stringify({ email, token }),
@@ -241,7 +241,7 @@ export class AuthService {
         message: `A  reset code  has been sent to ${email}`,
         otpEmail: email,
         expirationTime: this.otpDuration,
-        durationType: 'seconds',
+        durationType: "seconds",
       };
     } catch (err) {
       return Promise.reject(err);
@@ -258,7 +258,7 @@ export class AuthService {
       if (!cachedEmail) {
         return Promise.reject({
           ...responseHash.invalidOTP,
-          message: 'Token has expired',
+          message: "Token has expired",
         });
       }
       const user = await this.userService.getUser({ email: cachedEmail });
@@ -303,7 +303,7 @@ export class AuthService {
       if (!user) {
         return Promise.reject({
           ...responseHash.notFound,
-          message: 'A user with the verification email does not exists',
+          message: "A user with the verification email does not exists",
         });
       }
       const resetKey = uuid();

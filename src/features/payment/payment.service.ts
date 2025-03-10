@@ -1,12 +1,15 @@
-import { Injectable } from '@nestjs/common';
-import { PaymentFactory } from './payment.factory';
-import { IPaystackConfirmationEvent, ITransactionData } from '@/shared/interface/interface';
-import { MongoDataServices } from '@/datasources/mongodb/mongodb.service';
-import { IPaymentLinkResponse } from './processor.interface';
-import { Request } from 'express';
-import { responseHash } from '@/constants';
-import { appConfig } from '@/config';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Injectable } from "@nestjs/common";
+import { PaymentFactory } from "./payment.factory";
+import {
+  IPaystackConfirmationEvent,
+  ITransactionData,
+} from "@/shared/interface/interface";
+import { MongoDataServices } from "@/datasources/mongodb/mongodb.service";
+import { IPaymentLinkResponse } from "./processor.interface";
+import { Request } from "express";
+import { responseHash } from "@/constants";
+import { appConfig } from "@/config";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 
 @Injectable()
 export class PaymentService {
@@ -16,7 +19,6 @@ export class PaymentService {
   ) {}
   async makePayment(body: ITransactionData): Promise<IPaymentLinkResponse> {
     try {
-    
       body.amount = appConfig.isLive ? body.amount : 1000;
       const paymentFactory = new PaymentFactory();
       const processor = paymentFactory.getProcessor(body.processor);
@@ -25,7 +27,6 @@ export class PaymentService {
     } catch (err) {
       return Promise.reject(err);
     } finally {
-
       //Log the purchase order and the associated payment information
       this.logPayment(body);
     }
@@ -50,7 +51,7 @@ export class PaymentService {
       const body = req.body;
       const headers = req.headers;
       const paymentFactory = new PaymentFactory();
-      const processor = paymentFactory.getProcessor('paystack');
+      const processor = paymentFactory.getProcessor("paystack");
       //Confirm the webhook
       const webhookData = processor.confirmWebhook(body, headers);
       //Get the payment from the cache
@@ -69,12 +70,12 @@ export class PaymentService {
 
   async runPaystackCallback(req: Request) {
     try {
-      
       const paymentReference = req.query.reference as string;
       const paymentFactory = new PaymentFactory();
-      const paystack = paymentFactory.getProcessor('paystack');
-      const verificationResponse =
-        await paystack.confirmPaymentWithCallback(paymentReference);
+      const paystack = paymentFactory.getProcessor("paystack");
+      const verificationResponse = await paystack.confirmPaymentWithCallback(
+        paymentReference,
+      );
 
       //Retrieve the stored payment Log
       const [paymentLog] = await Promise.all([
@@ -85,17 +86,17 @@ export class PaymentService {
       if (!paymentLog) {
         return Promise.reject({
           ...responseHash.notFound,
-          message: 'We could not find a payment with that reference',
+          message: "We could not find a payment with that reference",
         });
       }
-      if (paymentLog.status === 'success') {
+      if (paymentLog.status === "success") {
         return Promise.reject({
           ...responseHash.badPayload,
-          message: 'The payment has already been processed',
+          message: "The payment has already been processed",
         });
       }
       const paymentMeta = paymentLog.meta;
-      const eventManagerPayload : IPaystackConfirmationEvent = {
+      const eventManagerPayload: IPaystackConfirmationEvent = {
         paymentReference,
         paymentLogData: {
           hasBeenProcessed: true,
@@ -103,29 +104,29 @@ export class PaymentService {
           status: verificationResponse.status,
         },
         attendeeData: {
-          firstName : paymentMeta.firstName,
-          tickets : paymentMeta.tickets , 
-          lastName : paymentMeta.lastName , 
-          transactionReference : paymentReference,
-          email : paymentMeta.email,
-          phoneNumber : paymentMeta.phoneNumber
+          firstName: paymentMeta.firstName,
+          tickets: paymentMeta.tickets,
+          lastName: paymentMeta.lastName,
+          transactionReference: paymentReference,
+          email: paymentMeta.email,
+          phoneNumber: paymentMeta.phoneNumber,
         },
         paymentData: {
-          userIdentifier : paymentMeta.email , 
+          userIdentifier: paymentMeta.email,
           paymentDate: new Date(verificationResponse.paid_at),
           amount: paymentMeta.originalAmount,
           ...paymentMeta,
         },
       };
       this.eventEmitter.emit(
-        'paystack-payment-confirmation',
+        "paystack-payment-confirmation",
         eventManagerPayload,
       );
 
-      return 'Payment completed. We will send value once confirmed';
+      return "Payment completed. We will send value once confirmed";
     } catch (err) {
       //Log any failed processing for further retry
-      console.log(err)
+      console.log(err);
       return Promise.reject(err);
     }
   }

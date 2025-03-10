@@ -1,5 +1,5 @@
-import { ISocialLink } from '@/shared/interface/interface';
-import { Types } from 'mongoose';
+import { ISocialLink } from "@/shared/interface/interface";
+import { Types } from "mongoose";
 
 export class MemberDTO {
   communityId: Types.ObjectId;

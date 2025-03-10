@@ -1,6 +1,6 @@
-import { IPagination } from '../interface/interface';
-import HTTPQueryParser from './http-query-parser';
-import { Request } from 'express';
+import { IPagination } from "../interface/interface";
+import HTTPQueryParser from "./http-query-parser";
+import { Request } from "express";
 
 export const ResponseExtraData = (
   req: Request,

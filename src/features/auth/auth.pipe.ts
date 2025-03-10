@@ -1,20 +1,26 @@
-import * as Joi from 'joi';
-import { BadRequestException, PipeTransform } from '@nestjs/common';
-import { validationMessages } from '@/shared/utils/validation-messages';
-import { pipeTransformer } from '@/shared/utils/pipe.transformer';
-import { signupSchema,verifyAccountSchema,forgotPasswordSchema, setPasswordSchema } from '@/shared/joi-schema';
-import { AddUserDTO } from '../user/user.dto';''
-import { responseHash } from '@/constants';
+import * as Joi from "joi";
+import { BadRequestException, PipeTransform } from "@nestjs/common";
+import { validationMessages } from "@/shared/utils/validation-messages";
+import { pipeTransformer } from "@/shared/utils/pipe.transformer";
+import {
+  signupSchema,
+  verifyAccountSchema,
+  forgotPasswordSchema,
+  setPasswordSchema,
+} from "@/shared/joi-schema";
+import { AddUserDTO } from "../user/user.dto";
+("");
+import { responseHash } from "@/constants";
 import {
   AuthLoginDTO,
   AuthSignupDTO,
   AuthVerifyAccountDTO,
   ForgotPasswordDTO,
   SetPasswordDTO,
-} from './auth.dto';
-import * as joiDate from '@joi/date';
+} from "./auth.dto";
+import * as joiDate from "@joi/date";
 
-const joi = Joi.extend(joiDate)
+const joi = Joi.extend(joiDate);
 
 export const loginSchema = joi
   .object({
@@ -25,22 +31,20 @@ export const loginSchema = joi
       })
       .required()
       .messages({
-        'string.empty': validationMessages('email').empty,
-        'any.required': validationMessages('email').required,
-        'any.only': validationMessages('email').only,
+        "string.empty": validationMessages("email").empty,
+        "any.required": validationMessages("email").required,
+        "any.only": validationMessages("email").only,
       }),
     password: joi
       .string()
       .required()
       .messages({
-        'string.empty': validationMessages('password').empty,
-        'any.required': validationMessages('password').required,
-        'any.only': validationMessages('password').only,
+        "string.empty": validationMessages("password").empty,
+        "any.required": validationMessages("password").required,
+        "any.only": validationMessages("password").only,
       }),
   })
   .options({ stripUnknown: true });
-
-
 
 export class AuthLoginPipe implements PipeTransform {
   transform(value: AuthLoginDTO): AuthLoginDTO {
@@ -73,8 +77,6 @@ export class AuthSignupPipe implements PipeTransform {
     return value;
   }
 }
-
-
 
 export class SignupPipe implements PipeTransform {
   transform(value: AddUserDTO) {

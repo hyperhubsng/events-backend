@@ -3,15 +3,15 @@ import {
   ExecutionContext,
   Injectable,
   UnauthorizedException,
-} from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { JwtService } from '@nestjs/jwt';
-import { Request } from 'express';
-import { PUBLIC_ROUTE, responseHash } from '@/constants';
-import { appConfig } from '@/config';
-import { UserService } from '../user/user.service';
-import { JwtUnion } from '@/shared/interface/interface';
-import { Types } from 'mongoose';
+} from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+import { JwtService } from "@nestjs/jwt";
+import { Request } from "express";
+import { PUBLIC_ROUTE, responseHash } from "@/constants";
+import { appConfig } from "@/config";
+import { UserService } from "../user/user.service";
+import { JwtUnion } from "@/shared/interface/interface";
+import { Types } from "mongoose";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -31,13 +31,13 @@ export class AuthGuard implements CanActivate {
       headers: { authorization },
     } = request;
     const [type, token] = String(authorization).split(regex) ?? [];
-    return type === 'Bearer' ? token : undefined;
+    return type === "Bearer" ? token : undefined;
   }
 
   private static validateTokenExpiration(expiration: number): void {
     const currentTimestamp = Math.floor(Date.now() / 1000);
     if (expiration < currentTimestamp) {
-      throw new UnauthorizedException('JWT token has expired');
+      throw new UnauthorizedException("JWT token has expired");
     }
   }
 
@@ -54,7 +54,7 @@ export class AuthGuard implements CanActivate {
 
       if (!token) {
         throw new UnauthorizedException(
-          'Unauthorized, provide authorization token',
+          "Unauthorized, provide authorization token",
         );
       }
 
@@ -66,8 +66,8 @@ export class AuthGuard implements CanActivate {
       await this.validateUser(payload, request);
       return true;
     } catch (e) {
-      if (e.name === 'JsonWebTokenError') {
-        throw new UnauthorizedException('Please,login again');
+      if (e.name === "JsonWebTokenError") {
+        throw new UnauthorizedException("Please,login again");
       }
       return Promise.reject(e);
     }

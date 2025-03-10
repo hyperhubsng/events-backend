@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import axios, { AxiosBasicCredentials, Method, ResponseType } from 'axios';
+import { Injectable } from "@nestjs/common";
+import axios, { AxiosBasicCredentials, Method, ResponseType } from "axios";
 
 interface AxiosData {
   url: string;
