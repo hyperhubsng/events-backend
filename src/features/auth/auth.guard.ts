@@ -12,6 +12,7 @@ import { appConfig } from "@/config";
 import { UserService } from "../user/user.service";
 import { JwtUnion } from "@/shared/interface/interface";
 import { Types } from "mongoose";
+import { AuthenticatedRequest } from "@/shared/interface/interface";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -20,7 +21,7 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
-    private readonly userService: UserService,
+    private readonly userService: UserService
   ) {
     this.secret = appConfig.secret;
   }
@@ -54,7 +55,7 @@ export class AuthGuard implements CanActivate {
 
       if (!token) {
         throw new UnauthorizedException(
-          "Unauthorized, provide authorization token",
+          "Unauthorized, provide authorization token"
         );
       }
 
@@ -73,17 +74,16 @@ export class AuthGuard implements CanActivate {
     }
   }
 
-  async validateUser(payload: JwtUnion, req: Request) {
+  async validateUser(payload: JwtUnion, req: AuthenticatedRequest) {
     try {
       const user = await this.userService.getUserById(
-        payload.userId as unknown as Types.ObjectId,
+        payload.userId as unknown as Types.ObjectId
       );
       if (!user) {
         return Promise.reject(responseHash.userNotFound);
       }
       const authUser = user.toObject();
-      // TODO(@BolajiOlajide): Declare user on the request object.
-      (req as any).user = {
+      req["user"] = {
         ...authUser,
         ...payload,
       };

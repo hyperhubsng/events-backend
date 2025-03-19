@@ -55,8 +55,8 @@ export const addEventSchema = joi
       .optional()
       .custom(validateObjectId)
       .messages({
-        "string.empty": validationMessages("matchId").empty,
-        "any.only": validationMessages("matchId").only,
+        "string.empty": validationMessages("ownerId").empty,
+        "any.only": validationMessages("ownerId").only,
       }),
     cost: joi
       .number()
@@ -357,18 +357,27 @@ export const eventListSchema = joi
       .string()
       .valid(
         "pending",
-      "ongoing",
-      "completed",
-      "deleted",
-      "rejected",
-      "cancelled",
-      "upcoming")
+        "ongoing",
+        "completed",
+        "deleted",
+        "rejected",
+        "cancelled",
+        "upcoming"
+      )
       .optional()
       .messages({
         "any.required": validationMessages("status").required,
         "string.empty": validationMessages("status").empty,
         "any.only": validationMessages("status").only,
         "string.base": validationMessages("status").string,
+      }),
+    owner: joi
+      .string()
+      .optional()
+      .custom(validateObjectId)
+      .messages({
+        "string.empty": validationMessages("owner").empty,
+        "any.only": validationMessages("owner").only,
       }),
   })
   .options({ stripUnknown: true });
@@ -470,7 +479,7 @@ export const purchaseTicketSchema = joi
         joi.object({
           ticketId: joi.string().custom(validateObjectId).required(),
           quantity: joi.number().required(),
-        }),
+        })
       )
       .required()
       .messages({
@@ -483,7 +492,7 @@ export const purchaseTicketSchema = joi
         joi.object({
           title: joi.string().required(),
           amount: joi.number().required(),
-        }),
+        })
       )
       .optional()
       .messages({

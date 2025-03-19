@@ -52,6 +52,12 @@ export class User extends Document {
     default: "vendor",
   })
   userType: string;
+
+  @Prop({
+    enum: ["active", "locked", "inactive"],
+    default: "active",
+  })
+  accountStatus: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

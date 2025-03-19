@@ -1,4 +1,12 @@
-import { Body, Controller, Post, Req, Res, UsePipes } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+  UsePipes,
+} from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { ILoginData } from "@/shared/interface/interface";
 import { SuccessResponse } from "@/shared/response/success-response";
@@ -17,12 +25,13 @@ import {
 } from "./auth.dto";
 import { PUBLIC } from "./public.decorator";
 import { AddUserDTO } from "../user/user.dto";
+import { AdminGuard } from "./admin.guard";
 
 @Controller("auth")
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly successResponse: SuccessResponse,
+    private readonly successResponse: SuccessResponse
   ) {}
 
   @PUBLIC()
@@ -30,7 +39,7 @@ export class AuthController {
   async handleLogin(
     @Req() req: Request,
     @Res() res: Response,
-    @Body(new AuthLoginPipe()) body: ILoginData,
+    @Body(new AuthLoginPipe()) body: ILoginData
   ) {
     const response = await this.authService.authenticateLogin(body);
     return this.successResponse.ok(res, req, { data: response });
@@ -41,9 +50,20 @@ export class AuthController {
   async signup(
     @Req() req: Request,
     @Res() res: Response,
-    @Body(new SignupPipe()) body: AddUserDTO,
+    @Body(new SignupPipe()) body: AddUserDTO
   ) {
     const response = await this.authService.onboardUser(body);
+    return this.successResponse.ok(res, req, { data: response });
+  }
+
+  @UseGuards(AdminGuard)
+  @Post("/onboard-organiser")
+  async onboardOrganiser(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Body(new SignupPipe()) body: AddUserDTO
+  ) {
+    const response = await this.authService.onboardOrganiser(body);
     return this.successResponse.ok(res, req, { data: response });
   }
 
@@ -52,7 +72,7 @@ export class AuthController {
   async verifySignup(
     @Req() req: Request,
     @Res() res: Response,
-    @Body(new VerificationPipe()) body: AuthVerifyAccountDTO,
+    @Body(new VerificationPipe()) body: AuthVerifyAccountDTO
   ) {
     const response = await this.authService.verifyUserRegistration(body);
     return this.successResponse.ok(res, req, { data: response });
@@ -63,7 +83,7 @@ export class AuthController {
   async forgotPassword(
     @Req() req: Request,
     @Body(new ForgotPasswordPipe()) body: ForgotPasswordDTO,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     const data = await this.authService.handleForgotPassword(body);
     return this.successResponse.ok(res, req, { data });
@@ -74,7 +94,7 @@ export class AuthController {
   async verifyResetPassword(
     @Req() req: Request,
     @Res() res: Response,
-    @Body(new VerificationPipe()) body: AuthVerifyAccountDTO,
+    @Body(new VerificationPipe()) body: AuthVerifyAccountDTO
   ) {
     const data = await this.authService.verifyResetPassword(body);
     return this.successResponse.ok(res, req, { data });
@@ -85,7 +105,7 @@ export class AuthController {
   async setPassword(
     @Req() req: Request,
     @Res() res: Response,
-    @Body(new SetPasswordPipe()) body: SetPasswordDTO,
+    @Body(new SetPasswordPipe()) body: SetPasswordDTO
   ) {
     await this.authService.setNewPassword(body);
     return this.successResponse.ok(res, req, { data: {} });

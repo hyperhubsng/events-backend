@@ -14,7 +14,7 @@ import { RedisService } from "@/datasources/redis/redis.service";
 export class UserService {
   constructor(
     private readonly mongoService: MongoDataServices,
-    private readonly redisService: RedisService,
+    private readonly redisService: RedisService
   ) {}
 
   async getUser(param: _FilterQuery<User>): Promise<User> {
@@ -27,7 +27,7 @@ export class UserService {
 
   async rejectUserTyype(
     userId: string | Types.ObjectId,
-    category: string,
+    category: string
   ): Promise<void> {
     try {
       const user = await this.getUser({ _id: userId });
@@ -47,7 +47,7 @@ export class UserService {
   async checkForExistingUser(queryParam: Record<string, any>[]): Promise<void> {
     const user: any = await this.mongoService.users.getOne(
       { $or: queryParam },
-      ["email"],
+      ["email"]
     );
     if (user) {
       return Promise.reject(responseHash.duplicateExists);
@@ -61,7 +61,7 @@ export class UserService {
   async updateUser(body: Partial<User>, user: User) {
     return await this.mongoService.users.updateOneOrCreateWithOldData(
       { _id: user._id },
-      body,
+      body
     );
   }
   async getUserById(_id: Types.ObjectId) {
@@ -84,7 +84,7 @@ export class UserService {
       if (req.query.userType) {
         query = {
           ...query,
-          currentUserType: req.query.userType,
+          userType: req.query.userType,
         };
       }
       if (req.query.q) {
@@ -94,25 +94,36 @@ export class UserService {
         };
       }
 
+      filters.push("-password");
+
       const users = await this.mongoService.users.getAll(
         query,
         filters,
         populate,
         docLimit,
         skip,
-        "createdAt",
+        "createdAt"
       );
 
       const userCount = await this.mongoService.users.count(query);
+      query.accountStatus = "active";
+      const inactiveUsersCount = await this.mongoService.users.count(query);
       const extraData: IPagination = ResponseExtraData(
         req,
         users.length,
-        userCount,
+        userCount
       );
 
       return {
         status: "success",
-        data: users,
+        data: {
+          users,
+          stats: {
+            total: userCount,
+            inactive: inactiveUsersCount,
+            active: userCount - inactiveUsersCount,
+          },
+        },
         extraData: extraData,
       };
     } catch (e) {
@@ -135,7 +146,7 @@ export class UserService {
 
   async checkUserUniqueness(
     fieldsToCheck: Record<string, any>[],
-    hasEmail: true,
+    hasEmail: true
   ): Promise<void> {
     try {
       //Check to Ensure Email is Unique

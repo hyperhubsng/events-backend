@@ -184,3 +184,7 @@ export interface IAttendee {
   phoneNumber: string;
   tickets: ITicket[];
 }
+
+export interface AuthenticatedRequest extends Request {
+  user?: Record<string, any>;
+}

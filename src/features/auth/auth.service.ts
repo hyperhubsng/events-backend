@@ -33,7 +33,7 @@ export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly userService: UserService,
-    private readonly redisService: RedisService,
+    private readonly redisService: RedisService
   ) {}
 
   async generateAuthToken(data: User): Promise<string> {
@@ -60,7 +60,7 @@ export class AuthService {
 
   private async loginResponseTransformer(
     token: string,
-    user: User,
+    user: User
   ): Promise<ILoginResponse> {
     const {
       _id: userId,
@@ -101,7 +101,7 @@ export class AuthService {
 
   async storeTemporaryRegistration(
     email: string,
-    userData: AddUserDTO,
+    userData: AddUserDTO
   ): Promise<ITemporaryUserResponse> {
     try {
       const reference = appConfig.isLive ? otpGenerator.generate(6) : "123456";
@@ -121,7 +121,7 @@ export class AuthService {
   async promiseToCacheData(
     email: string,
     userData: AddUserDTO,
-    reference: string,
+    reference: string
   ) {
     try {
       const tempUserCacheKey = getTempUserKey(email + reference);
@@ -130,12 +130,12 @@ export class AuthService {
         this.redisService.setEx(
           `${tempUserCacheKey}`,
           JSON.stringify(userData),
-          appConfig.otpDuration,
+          appConfig.otpDuration
         ),
         this.redisService.setEx(
           getTempUserKey(email),
           email,
-          appConfig.otpDuration,
+          appConfig.otpDuration
         ),
       ]);
     } catch (e) {
@@ -149,9 +149,23 @@ export class AuthService {
       //Check to Uniqueness of Data
       await this.userService.checkUserUniqueness(
         [{ email }, { phoneNumber }, { companyName }, { website }],
-        true,
+        true
       );
       return await this.storeTemporaryRegistration(email, body);
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  async onboardOrganiser(body: AddUserDTO): Promise<ILoginResponse> {
+    try {
+      const { email, phoneNumber, companyName, website } = body;
+      //Check to Uniqueness of Data
+      await this.userService.checkUserUniqueness(
+        [{ email }, { phoneNumber }, { companyName }, { website }],
+        true
+      );
+      return await this.createUser(body);
     } catch (e) {
       return Promise.reject(e);
     }
@@ -161,7 +175,7 @@ export class AuthService {
     body: AuthVerifyAccountDTO,
     otpKey: string,
     clearCacheFn: (payload: any) => Promise<any>,
-    callback: (payload: T) => Promise<any>,
+    callback: (payload: T) => Promise<any>
   ) {
     try {
       const { otp } = body;
@@ -188,7 +202,7 @@ export class AuthService {
         body,
         getTempUserKey(body.otpEmail + body.otp),
         this.clearCache.bind(this),
-        this.createUser.bind(this),
+        this.createUser.bind(this)
       );
     } catch (e) {
       return Promise.reject(e);
@@ -213,7 +227,7 @@ export class AuthService {
       const token = await this.generateAuthToken(user);
       return await this.loginResponseTransformer(
         token,
-        await this.userService.getUserById(user._id),
+        await this.userService.getUserById(user._id)
       );
     } catch (e) {
       return Promise.reject(e);
@@ -235,7 +249,7 @@ export class AuthService {
       await this.redisService.setEx(
         `verify:reset:password:${email}:${token}`,
         JSON.stringify({ email, token }),
-        this.otpDuration,
+        this.otpDuration
       );
       return {
         message: `A  reset code  has been sent to ${email}`,
@@ -280,7 +294,7 @@ export class AuthService {
         accountData,
         cacheKey,
         this.removeResetKey.bind(this),
-        this.generateResetToken.bind(this),
+        this.generateResetToken.bind(this)
       );
     } catch (e) {
       return Promise.reject(e);
@@ -311,7 +325,7 @@ export class AuthService {
         this.redisService.setEx(
           `set:password:${resetKey}`,
           email,
-          this.otpDuration,
+          this.otpDuration
         ),
       ]);
       return {

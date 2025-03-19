@@ -24,7 +24,8 @@ export class HttpQueryDTO {
   long: number;
   country: string;
   cost: number;
-  status : string 
+  status: string;
+  owner: Types.ObjectId;
 }
 
 export class CreateTicketDTO {
