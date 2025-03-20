@@ -536,9 +536,10 @@ export class EventService {
         }
         //Confirm that the ticket is still available
         if (ticket.quantity > t.orderLimit) {
+          const quantityAvailable = t.quantityAvailable || 0;
           return Promise.reject({
             ...responseHash.badPayload,
-            message: `You can only purchase ${t.orderLimit} tickets of ${t.title}. ${t.quantityAvailable} tickets still available  `,
+            message: `You can only purchase ${t.orderLimit} tickets of ${t.title}. ${quantityAvailable} tickets still available  `,
           });
         }
 
@@ -557,7 +558,7 @@ export class EventService {
         processor: "paystack",
         narration: `Payment for Match ${event.title} `,
         user: body.email,
-        amount: totalAmount * 100,
+        amount: totalAmount,
         paymentMethod: "web",
         status: "pending",
         transactionDate: new Date(),
@@ -570,11 +571,11 @@ export class EventService {
         ...body,
       };
       //Make Payment
-      const paymentBody = await this.paymentService.makePayment(paymentData);
+      const getPaymentLink = await this.paymentService.makePayment(paymentData);
       //The end goal of this process is to return a payment link
       return {
         hasPaymentLink: true,
-        paymentInfo: paymentBody.data,
+        paymentLink: getPaymentLink,
       };
     } catch (err) {
       if (err instanceof AxiosError) {

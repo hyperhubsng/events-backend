@@ -67,3 +67,8 @@ export const responseHash = {
 
 export const getTempUserKey = (identifier: string) =>
   `${appConfig.tempUserKeyPrefix}${identifier}`;
+
+export const PAYMENT_PROCESSORS = {
+  paystack: "paystack",
+  flutterWave: "flutterWave",
+};

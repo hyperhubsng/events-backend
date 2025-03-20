@@ -4,7 +4,7 @@ import { MongoDataServices } from "@/datasources/mongodb/mongodb.service";
 import {
   IAttendee,
   IPaymentData,
-  IPaystackConfirmationEvent,
+  IPaymentConfirmationEvent,
 } from "../interface/interface";
 import { Attendee } from "@/datasources/mongodb/schemas/attendee.schema";
 import { Types } from "mongoose";
@@ -15,7 +15,7 @@ export class EventManager {
   constructor(private readonly mongoService: MongoDataServices) {}
 
   @OnEvent("paystack-payment-confirmation")
-  async honourPaystackPayment(data: IPaystackConfirmationEvent) {
+  async honourPaystackPayment(data: IPaymentConfirmationEvent) {
     try {
       const { paymentReference, paymentLogData, paymentData, attendeeData } =
         data;
@@ -101,7 +101,7 @@ export class EventManager {
                 quantityAvailable: -ticket.quantity,
                 totalAmountSold: ticket.amount,
               },
-            },
+            }
           );
         }
       }

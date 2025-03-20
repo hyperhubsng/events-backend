@@ -96,7 +96,7 @@ export interface IPaymentData {
   tickets: ITicket[];
   charges: ICharges[];
 }
-export interface IPaystackConfirmationEvent {
+export interface IPaymentConfirmationEvent {
   paymentReference: string;
   paymentLogData: {
     hasBeenProcessed: boolean;

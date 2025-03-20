@@ -55,8 +55,16 @@ export const appConfig = {
     publicKey: process.env.PAYSTACK_PUBLIC_KEY as string,
     secretKey: process.env.PAYSTACK_SECRET_KEY as string,
     transactionURL: process.env.PAYSTACK_TRANSACTION_URL as string,
-    callbackURL: process.env.PAYSTACK_CALLBACK_URL as string,
+    callbackURL: process.env.PAYMENT_CALLBACK_URL as string,
     verificationURL: process.env.PAYSTACK_VERIFICATION_URL as string,
+  },
+
+  flutterWave: {
+    publicKey: process.env.FLUTTERWAVE_PUBLIC_KEY as string,
+    secretKey: process.env.FLUTTERWAVE_SECRET_KEY as string,
+    paymentURL: process.env.FLUTTERWAVE_PAYMENT_URL as string,
+    callbackURL: process.env.PAYMENT_CALLBACK_URL as string,
+    transactionsURL: process.env.FLUTTERWAVE_TRANSACTIONS_URL as string,
   },
   serverPort: 3000,
   aws: {

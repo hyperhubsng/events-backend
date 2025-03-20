@@ -55,7 +55,7 @@ export class Payment extends Document {
   paymentType: string;
 
   @Prop({
-    enum: ["paystack", "monnify", "flutterwave"],
+    enum: ["paystack", "monnify", "flutterWave"],
   })
   processor: string;
 

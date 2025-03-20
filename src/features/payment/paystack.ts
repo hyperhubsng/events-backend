@@ -33,7 +33,8 @@ export class Paystack implements PaymentProcessor {
         headers: this.setHeaders() as unknown as AxiosHeaders,
         data: paymentData,
       });
-      return request.data;
+
+      return request.data.data.authorization_url;
     } catch (err) {
       return Promise.reject(err);
     }
@@ -54,7 +55,7 @@ export class Paystack implements PaymentProcessor {
   async confirmPaymentWithCallback(transactionId: string | number) {
     try {
       const { data: paystackResponse } = await this.verifyPayment(
-        transactionId,
+        transactionId
       );
       const status = paystackResponse.status;
       if (!Object.is(status, "success")) {

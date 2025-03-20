@@ -42,9 +42,15 @@ import {
 import { EventsController } from "./event/event.controllers";
 import { EventService } from "./event/event.service";
 import { S3Service } from "./s3/s3.service";
+import { PaymentController } from "./payment/payment.controller";
 
 @Module({
-  controllers: [AuthController, UserController, EventsController],
+  controllers: [
+    AuthController,
+    UserController,
+    EventsController,
+    PaymentController,
+  ],
   providers: [
     ...redisProviders,
     JwtService,
@@ -98,7 +104,7 @@ import { S3Service } from "./s3/s3.service";
           schema: AttendeeSchema,
         },
       ],
-      "hyperhubs",
+      "hyperhubs"
     ),
     JwtModule.register({
       global: true,
