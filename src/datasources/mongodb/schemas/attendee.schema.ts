@@ -64,6 +64,14 @@ export class Attendee extends Document {
     default: false,
   })
   isChecked: boolean;
+
+  @Prop({
+    default: 0,
+  })
+  ticketsChecked: number;
+
+  @Prop()
+  passCode: string;
 }
 
 export type AttendeeDocument = HydratedDocument<Attendee>;

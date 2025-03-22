@@ -97,7 +97,7 @@ export const addEventSchema = joi
       .date()
       .custom(dateChecker)
       .format("YYYY-MM-DD HH:mm")
-      .required()
+      .optional()
       .messages({
         "any.required": validationMessages("endDate").required,
         "string.pattern.base":
@@ -362,7 +362,9 @@ export const eventListSchema = joi
         "deleted",
         "rejected",
         "cancelled",
-        "upcoming"
+        "upcoming",
+        "past",
+        "active"
       )
       .optional()
       .messages({
@@ -499,5 +501,34 @@ export const purchaseTicketSchema = joi
         "any.required": validationMessages("charg").required,
         "any.only": validationMessages("charg").only,
       }),
+  })
+  .options({ stripUnknown: true });
+
+export const attendeeQuerySchema = joi
+  .object({
+    action: joi
+      .string()
+      .valid("checkin", "checkout", "view")
+      .required()
+      .messages({
+        "any.required": validationMessages("action").required,
+        "string.empty": validationMessages("action").empty,
+        "any.only": validationMessages("action").only,
+        "string.base": validationMessages("action").string,
+      }),
+    actionType: joi.when("action", {
+      is: ["checkin", "checkout"],
+      then: joi
+        .string()
+        .valid("scan", "code", "click")
+        .required()
+        .messages({
+          "any.required": validationMessages("actionType").required,
+          "string.empty": validationMessages("actionType").empty,
+          "any.only": validationMessages("actionType").only,
+          "string.base": validationMessages("actionType").string,
+        }),
+      otherwise: joi.allow(null, ""),
+    }),
   })
   .options({ stripUnknown: true });

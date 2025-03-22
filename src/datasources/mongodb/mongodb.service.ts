@@ -24,6 +24,8 @@ import {
   Ticket,
   TicketDocument,
 } from "@/datasources/mongodb/schemas/ticket.schema";
+import { EventLog, EventLogDocument } from "./schemas/eventLog.schema";
+
 interface IMatch {
   $match: Record<string, any>;
 }
@@ -51,71 +53,71 @@ export abstract class IGenericRepository<T> {
     populate?: string[],
     limit?: number,
     skip?: number,
-    sortField?: string,
+    sortField?: string
   ): Promise<T[]>;
 
   abstract getAllWithNoPagination(
     filter: mongoose._FilterQuery<T>,
     projection?: string | string[],
     populate?: string[],
-    sortField?: string,
+    sortField?: string
   ): Promise<T[]>;
 
   abstract getOne(
     item: mongoose._FilterQuery<T>,
     projection: string | string[],
-    populate?: string[],
+    populate?: string[]
   ): Promise<any>;
 
   abstract getOneWithFields(
     item: mongoose._FilterQuery<T>,
-    populate?: string[],
+    populate?: string[]
   ): Promise<any>;
 
   abstract getOneWithAllFields(
     item: mongoose._FilterQuery<T>,
-    populate?: string[],
+    populate?: string[]
   ): Promise<any>;
 
   abstract create(item: Partial<T>): Promise<T>;
 
   abstract createWithTransaction(
     item: Partial<T>,
-    session: mongoose.ClientSession,
+    session: mongoose.ClientSession
   ): Promise<T>;
 
   abstract getOneWithTransaction(
     item: mongoose._FilterQuery<T>,
-    session: mongoose.ClientSession,
+    session: mongoose.ClientSession
   ): Promise<T>;
 
   abstract getAllWithTransaction(
     item: mongoose._FilterQuery<T>,
     session: mongoose.ClientSession,
-    projection?: string[],
+    projection?: string[]
   ): Promise<T[]>;
 
   abstract updateOne(
     query: mongoose._FilterQuery<T>,
     data: mongoose.UpdateQuery<T>,
-    session?: mongoose.ClientSession,
+    session?: mongoose.ClientSession
   ): Promise<T>;
 
   abstract updateOneOrCreate(
     query: mongoose._FilterQuery<T>,
     data: mongoose.UpdateQuery<T>,
-    session?: mongoose.ClientSession,
+    session?: mongoose.ClientSession
   ): Promise<T>;
 
   abstract updateOneOrCreateWithOldData(
     query: mongoose._FilterQuery<T>,
     data: mongoose.UpdateQuery<T>,
-    session?: mongoose.ClientSession,
+    session?: mongoose.ClientSession
   ): Promise<T>;
 
   abstract updateMany(
     query: mongoose._FilterQuery<T>,
-    data: mongoose.UpdateQuery<T>,
+    data: mongoose.UpdateQuery<T>
   ): Promise<T>;
 
   abstract count(filter: mongoose._FilterQuery<T>): Promise<number>;
@@ -145,7 +147,7 @@ export class MongoGenericRepository<T> implements IGenericRepository<T> {
     populate?: string[],
     limit?: number,
     skip?: number,
-    sortField?: string,
+    sortField?: string
   ): Promise<T[]> {
     return this._repository
       .find(filter)
@@ -161,7 +163,7 @@ export class MongoGenericRepository<T> implements IGenericRepository<T> {
     filter: mongoose._FilterQuery<T>,
     projection?: string | string[],
     populate?: string[],
-    sortField?: string,
+    sortField?: string
   ): Promise<T[]> {
     return this._repository
       .find(filter)
@@ -174,7 +176,7 @@ export class MongoGenericRepository<T> implements IGenericRepository<T> {
   getOne(
     item: mongoose._FilterQuery<T>,
     projection: string | string[],
-    populate?: string[],
+    populate?: string[]
   ): Promise<any> {
     return this._repository
       .findOne(item, "body")
@@ -185,7 +187,7 @@ export class MongoGenericRepository<T> implements IGenericRepository<T> {
 
   getOneWithFields(
     item: mongoose._FilterQuery<T>,
-    populate?: string[],
+    populate?: string[]
   ): Promise<any> {
     return this._repository
       .findOne(item)
@@ -195,7 +197,7 @@ export class MongoGenericRepository<T> implements IGenericRepository<T> {
 
   getOneWithAllFields(
     item: mongoose._FilterQuery<T>,
-    populate?: string[],
+    populate?: string[]
   ): Promise<any> {
     return this._repository
       .findOne(item)
@@ -209,7 +211,7 @@ export class MongoGenericRepository<T> implements IGenericRepository<T> {
 
   async createWithTransaction(
     item: Partial<T>,
-    session: mongoose.ClientSession,
+    session: mongoose.ClientSession
   ): Promise<T> {
     const result = new this._repository(item);
     await result.save({ session });
@@ -218,7 +220,7 @@ export class MongoGenericRepository<T> implements IGenericRepository<T> {
 
   getOneWithTransaction(
     item: mongoose._FilterQuery<T>,
-    session: mongoose.ClientSession,
+    session: mongoose.ClientSession
   ): Promise<any> {
     return this._repository.findOne(item).session(session).exec();
   }
@@ -226,7 +228,7 @@ export class MongoGenericRepository<T> implements IGenericRepository<T> {
   async getAllWithTransaction(
     item: mongoose._FilterQuery<T>,
     session: mongoose.ClientSession,
-    projections: string[],
+    projections: string[]
   ): Promise<any> {
     return this._repository.find(item).session(session).select(projections);
   }
@@ -234,7 +236,7 @@ export class MongoGenericRepository<T> implements IGenericRepository<T> {
   updateOne(
     query: mongoose._FilterQuery<T>,
     data: mongoose.UpdateQuery<T>,
-    session?: mongoose.ClientSession,
+    session?: mongoose.ClientSession
   ): any {
     return this._repository.findOneAndUpdate(query, data, {
       session,
@@ -245,7 +247,7 @@ export class MongoGenericRepository<T> implements IGenericRepository<T> {
   updateOneOrCreate(
     query: mongoose._FilterQuery<T>,
     data: mongoose.UpdateQuery<T>,
-    session?: mongoose.ClientSession,
+    session?: mongoose.ClientSession
   ): any {
     return this._repository.findOneAndUpdate(query, data, {
       session,
@@ -257,7 +259,7 @@ export class MongoGenericRepository<T> implements IGenericRepository<T> {
   updateOneOrCreateWithOldData(
     query: mongoose._FilterQuery<T>,
     data: mongoose.UpdateQuery<T>,
-    session?: mongoose.ClientSession,
+    session?: mongoose.ClientSession
   ): any {
     return this._repository.findOneAndUpdate(query, data, {
       session,
@@ -269,7 +271,7 @@ export class MongoGenericRepository<T> implements IGenericRepository<T> {
   updateMany(
     query: mongoose._FilterQuery<T>,
     data: mongoose.UpdateQuery<T>,
-    session?: mongoose.ClientSession,
+    session?: mongoose.ClientSession
   ): any {
     return this._repository.updateMany(query, data, { session });
   }
@@ -307,6 +309,7 @@ export abstract class MongoDataServices {
   abstract events: IGenericRepository<Event>;
   abstract tickets: IGenericRepository<Ticket>;
   abstract attendees: IGenericRepository<Attendee>;
+  abstract eventLogs: IGenericRepository<EventLog>;
 }
 
 @Injectable()
@@ -317,6 +320,7 @@ export class NosqlService implements MongoDataServices, OnApplicationBootstrap {
   events: MongoGenericRepository<Event>;
   tickets: MongoGenericRepository<Ticket>;
   attendees: MongoGenericRepository<Attendee>;
+  eventLogs: MongoGenericRepository<EventLog>;
   constructor(
     @InjectModel(User.name, "hyperhubs")
     private UserRepository: Model<UserDocument>,
@@ -330,18 +334,23 @@ export class NosqlService implements MongoDataServices, OnApplicationBootstrap {
     private TicketRepository: Model<TicketDocument>,
     @InjectModel(Attendee.name, "hyperhubs")
     private AttendeeRepository: Model<AttendeeDocument>,
+    @InjectModel(EventLog.name, "hyperhubs")
+    private EventLogRepository: Model<EventLogDocument>
   ) {}
 
   onApplicationBootstrap() {
     this.users = new MongoGenericRepository<User>(this.UserRepository);
     this.payments = new MongoGenericRepository<Payment>(this.PaymentRepository);
     this.paymentLogs = new MongoGenericRepository<PaymentLog>(
-      this.PaymentLogRepository,
+      this.PaymentLogRepository
     );
     this.events = new MongoGenericRepository<Event>(this.EventRepository);
     this.tickets = new MongoGenericRepository<Ticket>(this.TicketRepository);
     this.attendees = new MongoGenericRepository<Attendee>(
-      this.AttendeeRepository,
+      this.AttendeeRepository
+    );
+    this.eventLogs = new MongoGenericRepository<EventLog>(
+      this.EventLogRepository
     );
   }
 }

@@ -43,6 +43,13 @@ import { EventsController } from "./event/event.controllers";
 import { EventService } from "./event/event.service";
 import { S3Service } from "./s3/s3.service";
 import { PaymentController } from "./payment/payment.controller";
+import { AwsService } from "./aws/aws.service";
+import { AttendeeService } from "./attendee/attendee.service";
+import { AttendeeController } from "./attendee/attendee.controller";
+import {
+  EventLog,
+  EventtLogSchema,
+} from "@/datasources/mongodb/schemas/eventLog.schema";
 
 @Module({
   controllers: [
@@ -50,6 +57,7 @@ import { PaymentController } from "./payment/payment.controller";
     UserController,
     EventsController,
     PaymentController,
+    AttendeeController,
   ],
   providers: [
     ...redisProviders,
@@ -75,6 +83,8 @@ import { PaymentController } from "./payment/payment.controller";
     EventManager,
     EventService,
     S3Service,
+    AwsService,
+    AttendeeService,
   ],
   imports: [
     MongooseModule.forFeature(
@@ -102,6 +112,10 @@ import { PaymentController } from "./payment/payment.controller";
         {
           name: Attendee.name,
           schema: AttendeeSchema,
+        },
+        {
+          name: EventLog.name,
+          schema: EventtLogSchema,
         },
       ],
       "hyperhubs"

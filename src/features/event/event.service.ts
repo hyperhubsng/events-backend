@@ -9,7 +9,11 @@ import HTTPQueryParser from "@/shared/utils/http-query-parser";
 import { ResponseExtraData } from "@/shared/utils/http-response-extra-data";
 import { Injectable } from "@nestjs/common";
 import { Request } from "express";
-import { responseHash } from "@/constants";
+import {
+  PAYMENT_PROCESSORS,
+  TICKET_PURCHASE_MESSAGE,
+  responseHash,
+} from "@/constants";
 import { PipelineStage, Types, _FilterQuery } from "mongoose";
 import { UserService } from "../user/user.service";
 import {
@@ -105,7 +109,7 @@ export class EventService {
             category: new RegExp(`^${queryTerm}$`, "i"),
           },
           {
-            name: new RegExp(`^${queryTerm}$`, "i"),
+            title: new RegExp(`^${queryTerm}$`, "i"),
           },
         ],
       };
@@ -135,6 +139,16 @@ export class EventService {
         ...query,
         status: httpQuery.status,
       };
+      if (query.status === "past") {
+        query.startDate = {
+          $lte: new Date(),
+        };
+      }
+      if (query.status === "upcoming") {
+        query.startDate = {
+          $gte: new Date(),
+        };
+      }
     }
     if (httpQuery.owner) {
       query = {
@@ -505,7 +519,13 @@ export class EventService {
         _id: new Types.ObjectId(eventId),
       };
       const event = await this.getOneEvent(query);
-
+      const currentTime = Date.now();
+      if (currentTime > new Date(event.startDate).getTime()) {
+        return Promise.reject({
+          ...responseHash.notFound,
+          message: `Event currently not in sale`,
+        });
+      }
       const totalCharges: number = charges
         ? charges.reduce((a, b) => a + b.amount, 0)
         : 0;
@@ -555,8 +575,8 @@ export class EventService {
       const paymentData: ITransactionData = {
         paymentReference: uuid(),
         currency: "NGN",
-        processor: "paystack",
-        narration: `Payment for Match ${event.title} `,
+        processor: PAYMENT_PROCESSORS.flutterWave,
+        narration: `Payment for Event ${event.title} `,
         user: body.email,
         amount: totalAmount,
         paymentMethod: "web",
@@ -641,6 +661,59 @@ export class EventService {
       return Promise.reject(err);
     }
   }
+
+  async getEventAttendees(eventId: string, req: Request, user?: User) {
+    try {
+      const { skip, docLimit, dbQueryParam } = HTTPQueryParser(req.query);
+      const query: Record<string, any> = {
+        eventId: new Types.ObjectId(eventId),
+      };
+      if (dbQueryParam.createdAt) {
+        query.createdAt = dbQueryParam.createdAt;
+      }
+      if (dbQueryParam.createdAt) {
+        query.createdAt = dbQueryParam.createdAt;
+      }
+      if (req.query.ticketId) {
+        query.ticketId = new Types.ObjectId(eventId);
+      }
+      const statsQuery: Record<string, any> = {};
+      if (req.query.ticket && req.query.ticket === "all") {
+        statsQuery.eventId = new Types.ObjectId(eventId);
+      }
+      if (req.query.ticket && req.query.ticket !== "all") {
+        const ticketId = req.query.ticket as string;
+        verifyObjectId(ticketId);
+        statsQuery._id = new Types.ObjectId(ticketId);
+        query.ticketId = new Types.ObjectId(ticketId);
+      }
+      if (Object.values(statsQuery).length === 0) {
+        return Promise.reject({
+          ...responseHash.badPayload,
+          message: "Please,provide queries for the stats",
+        });
+      }
+
+      const queryResult = await this.aggregateEventSales(query, skip, docLimit);
+      const queryCount = await this.mongoService.attendees.count(query);
+      const extraData: IPagination = ResponseExtraData(
+        req,
+        queryResult.length,
+        queryCount
+      );
+
+      return {
+        status: "success",
+        data: {
+          guests: queryResult,
+        },
+        extraData: extraData,
+      };
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
   private prepareEventStats(statsArray: Record<string, any>[]) {
     if (statsArray.length === 0) {
       return {

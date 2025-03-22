@@ -95,6 +95,7 @@ export interface IPaymentData {
   userIdentifier: string;
   tickets: ITicket[];
   charges: ICharges[];
+  amount?: number;
 }
 export interface IPaymentConfirmationEvent {
   paymentReference: string;
@@ -183,6 +184,7 @@ export interface IAttendee {
   email: string;
   phoneNumber: string;
   tickets: ITicket[];
+  passCode: string;
 }
 
 export interface AuthenticatedRequest extends Request {

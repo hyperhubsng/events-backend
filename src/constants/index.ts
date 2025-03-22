@@ -72,3 +72,21 @@ export const PAYMENT_PROCESSORS = {
   paystack: "paystack",
   flutterWave: "flutterWave",
 };
+
+export const TICKET_PURCHASE_MESSAGE = (data: Record<string, any>) => {
+  return `
+  <main>
+    <h1>Ticket Purchase Success</h1>
+    <p>Hello ${data.firstName} ${data.lastName} , 
+    your ticket purchase for ${data.eventTitle} was successful
+    </p>
+    <p> Purchase Summary : </p>
+    <p> Quantity : ${data.ticketQuantity} </p>
+    <p> Total Amount : ${data.ticketAmount} </p>
+    <p> On the day of the event, provide thhis receipt for scanning</p>
+    <img src=${data.src} alt='otp image'/>
+    <p>Or give them your pass code : ${data.passCode} </p>
+    <p>We look forward to seeing you. Cheers!</p>
+  </main>
+  `;
+};

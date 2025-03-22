@@ -2,9 +2,14 @@ import "dotenv/config";
 import * as path from "path";
 import * as winston from "winston";
 import * as fs from "fs";
-
 import { S3Client } from "@aws-sdk/client-s3";
 import { fromEnv } from "@aws-sdk/credential-providers";
+const { SESClient } = require("@aws-sdk/client-ses");
+
+export const sesClient = new SESClient({
+  region: process.env.AWS_REGION,
+  credentials: fromEnv(),
+});
 
 export const s3Client = new S3Client({
   credentials: fromEnv(),
@@ -71,6 +76,8 @@ export const appConfig = {
     bucketName: process.env.AWS_BUCKET as string,
     region: process.env.AWS_REGION as string,
   },
+  emailSender: process.env.DEFAULT_EMAIL_SENDER as string,
+  ticketConfirmationURL: process.env.TICKET_CONFIRMATION_BASE_URL as string,
 };
 
 export const mongooseConfig: any = {

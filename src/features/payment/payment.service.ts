@@ -9,19 +9,27 @@ import {
 import { MongoDataServices } from "@/datasources/mongodb/mongodb.service";
 import { IPaymentLinkResponse } from "./processor.interface";
 import { Request } from "express";
-import { PAYMENT_PROCESSORS, responseHash } from "@/constants";
+import {
+  PAYMENT_PROCESSORS,
+  TICKET_PURCHASE_MESSAGE,
+  responseHash,
+} from "@/constants";
 import { appConfig } from "@/config";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { User } from "@/datasources/mongodb/schemas/user.schema";
 import { Attendee } from "@/datasources/mongodb/schemas/attendee.schema";
 import { Types } from "mongoose";
 import { Payment } from "@/datasources/mongodb/schemas/payment.schema";
+import { toDataURL } from "qrcode";
+import { AwsService } from "../aws/aws.service";
+import { randomInt } from "crypto";
 
 @Injectable()
 export class PaymentService {
   constructor(
     private readonly mongoService: MongoDataServices,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    private readonly awsService: AwsService
   ) {}
   async makePayment(body: ITransactionData): Promise<IPaymentLinkResponse> {
     try {
@@ -126,6 +134,7 @@ export class PaymentService {
           transactionReference: paymentReference,
           email: paymentMeta.email,
           phoneNumber: paymentMeta.phoneNumber,
+          passCode: this.generateCode(),
         },
         paymentData: {
           userIdentifier: paymentMeta.email,
@@ -254,7 +263,9 @@ export class PaymentService {
 
       const paymentMeta = paymentLog.meta;
       const SUCCESS_STATUS = "success";
-
+      const slicePaymentReference = paymentReference.slice(0, 2);
+      const generatedCode = this.generateCode(slicePaymentReference);
+      const passCode = generatedCode.slice(0, 9);
       const paymentPayload: IPaymentConfirmationEvent = {
         paymentReference,
         paymentLogData: {
@@ -269,6 +280,7 @@ export class PaymentService {
           transactionReference: paymentReference,
           email: paymentMeta.email,
           phoneNumber: paymentMeta.phoneNumber,
+          passCode: passCode,
         },
         paymentData: {
           userIdentifier: paymentMeta.email,
@@ -313,9 +325,10 @@ export class PaymentService {
   }
 
   async honourPayment(data: IPaymentConfirmationEvent) {
+    let hasError = false;
+    const { paymentReference, paymentLogData, paymentData, attendeeData } =
+      data;
     try {
-      const { paymentReference, paymentLogData, paymentData, attendeeData } =
-        data;
       return Promise.all([
         //Update the payment Log
         this.updatePaymentLog(paymentReference, paymentLogData),
@@ -326,9 +339,30 @@ export class PaymentService {
         this.sendNotification(),
       ]);
     } catch (err) {
+      hasError = true;
       //Store for Retry
       //Notify to be aware of the error nature so as to address
       return;
+    } finally {
+      if (hasError) {
+        return;
+      }
+      const confirmationURL = `${appConfig.ticketConfirmationURL}/${attendeeData.passCode}?action=checkin&actionMethod=scan`;
+      const qrCode = await this.generateEventQRCode(confirmationURL);
+
+      this.awsService.sendEmail(
+        ["dev@hyperhubs.net"],
+        "Hyperhubs Events",
+        TICKET_PURCHASE_MESSAGE({
+          src: qrCode,
+          firstName: attendeeData.firstName,
+          lastName: attendeeData.lastName,
+          ticketAmount: paymentData.amount,
+          ticketQuantity: paymentData.tickets.length,
+          eventTitle: paymentData.narration,
+          passCode: attendeeData.passCode,
+        })
+      );
     }
   }
 
@@ -362,7 +396,7 @@ export class PaymentService {
 
   private async insertAttendee(data: IAttendee) {
     let doesNotHaveError = true;
-    const { tickets, firstName, lastName, email, phoneNumber } = data;
+    const { tickets, firstName, lastName, email, phoneNumber, passCode } = data;
     const attendeeData: Partial<Attendee>[] = [];
     for (const ticket of tickets) {
       attendeeData.push({
@@ -377,6 +411,7 @@ export class PaymentService {
         ownerId: ticket.ownerId,
         phoneNumber,
         title: ticket.title,
+        passCode,
       });
     }
     try {
@@ -403,5 +438,21 @@ export class PaymentService {
         }
       }
     }
+  }
+
+  async generateEventQRCode(text: string) {
+    try {
+      return await toDataURL(text);
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  generateCode(saltString?: string): string {
+    const timestamp = Date.now().toString().slice(-5);
+    const randomSuffix = randomInt(1000, 9999).toString();
+    const randomPrefix = randomInt(100, 999).toString();
+    const prependSalt = saltString ? `${saltString}` : "";
+    return `${prependSalt}${randomPrefix}${timestamp}${randomSuffix}`;
   }
 }

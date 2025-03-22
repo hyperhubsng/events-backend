@@ -27,11 +27,6 @@ export class Event extends Document {
   @Prop()
   venue: string;
 
-  @Prop({
-    default: "https://images.com/fake-image.jpeg",
-  })
-  bannerUrl: string;
-
   @Prop()
   smallBannerUrl: string;
 
@@ -55,7 +50,7 @@ export class Event extends Document {
       "deleted",
       "rejected",
       "cancelled",
-      "upcoming"
+      "upcoming",
     ],
     default: "pending",
   })
