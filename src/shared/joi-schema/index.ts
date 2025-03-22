@@ -501,6 +501,25 @@ export const purchaseTicketSchema = joi
         "any.required": validationMessages("charg").required,
         "any.only": validationMessages("charg").only,
       }),
+    callbackUrl: joi
+      .string()
+      .optional()
+      .messages({
+        "any.required": validationMessages("callbackUrl").required,
+        "string.empty": validationMessages("callbackUrl").empty,
+        "any.only": validationMessages("callbackUrl").only,
+        "string.base": validationMessages("callbackUrl").string,
+      }),
+    paymentProcessor: joi
+      .string()
+      .valid("paystack", "flutterWave")
+      .optional()
+      .messages({
+        "any.required": validationMessages("paymentProcessor").required,
+        "string.empty": validationMessages("paymentProcessor").empty,
+        "any.only": validationMessages("paymentProcessor").only,
+        "string.base": validationMessages("paymentProcessor").string,
+      }),
   })
   .options({ stripUnknown: true });
 

@@ -571,11 +571,11 @@ export class EventService {
       }
 
       totalAmount += totalCharges;
-
+      const processor = body.paymentProcessor || PAYMENT_PROCESSORS.flutterWave;
       const paymentData: ITransactionData = {
         paymentReference: uuid(),
         currency: "NGN",
-        processor: PAYMENT_PROCESSORS.flutterWave,
+        processor,
         narration: `Payment for Event ${event.title} `,
         user: body.email,
         amount: totalAmount,

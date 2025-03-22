@@ -18,14 +18,14 @@ export class Paystack implements PaymentProcessor {
   async makePayment(data: ITransactionData): Promise<IPaymentLinkResponse> {
     try {
       const paystackPaymentUrl = appConfig.paystack.transactionURL;
-      const { paymentReference, amount, currency } = data;
+      const { paymentReference, amount, currency, callbackUrl } = data;
 
       const paymentData = {
         email: data.userIdentifier,
         currency,
         amount: Number(amount) * 100,
         reference: paymentReference,
-        callback_url: appConfig.paystack.callbackURL,
+        callback_url: callbackUrl || appConfig.paystack.callbackURL,
       };
       const request = await axios({
         method: "post",

@@ -76,6 +76,7 @@ export interface ITransactionData {
   beneficiaryId: string | Types.ObjectId;
   firstName?: string;
   lastName?: string;
+  callbackUrl?: string;
 }
 
 export interface IPaymentHeaders {

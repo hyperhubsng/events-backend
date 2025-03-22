@@ -51,4 +51,6 @@ export class PurchaseTicketDTO {
   email: string;
   tickets: ITicket[];
   charges: ICharges[];
+  callbackUrl: string;
+  paymentProcessor: string;
 }

@@ -17,7 +17,7 @@ export class Flutterwave implements PaymentProcessor {
   async makePayment(data: ITransactionData): Promise<IPaymentLinkResponse> {
     try {
       const paymentUrl = appConfig.flutterWave.paymentURL;
-      const { paymentReference, amount, currency } = data;
+      const { paymentReference, amount, currency, callbackUrl } = data;
 
       const paymentData = {
         currency,
@@ -26,7 +26,7 @@ export class Flutterwave implements PaymentProcessor {
         customer: {
           email: data.userIdentifier,
         },
-        redirect_url: appConfig.flutterWave.callbackURL,
+        redirect_url: callbackUrl || appConfig.flutterWave.callbackURL,
         meta: {
           firstName: data.firstName,
           lastName: data.lastName,
