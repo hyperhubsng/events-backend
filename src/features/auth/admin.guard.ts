@@ -18,7 +18,7 @@ export class AdminGuard implements CanActivate {
 
     throw new HttpException(
       "Sorry, you cannot access this",
-      HttpStatus.UNAUTHORIZED
+      HttpStatus.UNAUTHORIZED,
     );
   }
 }

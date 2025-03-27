@@ -4,7 +4,6 @@ import * as joiDate from "@joi/date";
 import { rejectPastDate } from "../utils/reject-past-date";
 import { validateObjectId } from "../utils/objectid-joi-validator";
 import { dateChecker } from "../utils/date-checker";
-import { ObjectIdValidationPipe } from "../pipes/object-id-pipe";
 const joi = Joi.extend(joiDate);
 
 export const addEventSchema = joi
@@ -364,7 +363,7 @@ export const eventListSchema = joi
         "cancelled",
         "upcoming",
         "past",
-        "active"
+        "active",
       )
       .optional()
       .messages({
@@ -481,7 +480,7 @@ export const purchaseTicketSchema = joi
         joi.object({
           ticketId: joi.string().custom(validateObjectId).required(),
           quantity: joi.number().required(),
-        })
+        }),
       )
       .required()
       .messages({
@@ -494,7 +493,7 @@ export const purchaseTicketSchema = joi
         joi.object({
           title: joi.string().required(),
           amount: joi.number().required(),
-        })
+        }),
       )
       .optional()
       .messages({
@@ -549,5 +548,428 @@ export const attendeeQuerySchema = joi
         }),
       otherwise: joi.allow(null, ""),
     }),
+  })
+  .options({ stripUnknown: true });
+
+export const createDiscountSchema = joi
+  .object({
+    targets: joi
+      .array()
+      .items(
+        joi.object({
+          targetId: joi.string().custom(validateObjectId).required(),
+          targetType: joi
+            .string()
+            .valid("event", "ticket")
+            .required()
+            .messages({
+              "any.required": validationMessages("targetType").required,
+              "string.empty": validationMessages("targetType").empty,
+              "any.only": validationMessages("targetType").only,
+              "string.base": validationMessages("targetType").string,
+            }),
+        }),
+      )
+      .required()
+      .messages({
+        "any.required": validationMessages("targets").required,
+        "any.only": validationMessages("targets").only,
+      }),
+    ownerId: joi
+      .string()
+      .optional()
+      .custom(validateObjectId)
+      .messages({
+        "string.empty": validationMessages("ownerId").empty,
+        "any.only": validationMessages("ownerId").only,
+      }),
+    code: joi
+      .string()
+      .required()
+      .messages({
+        "string.empty": validationMessages("code").empty,
+        "any.only": validationMessages("code").only,
+      }),
+    hasExpiration: joi
+      .boolean()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("hasExpiration").empty,
+        "any.only": validationMessages("hasExpiration").only,
+        "any.required": validationMessages("hasExpiration").required,
+        "boolean.base": validationMessages("hasExpiration").boolean,
+      }),
+    hasMaxCap: joi
+      .boolean()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("hasMaxCap").empty,
+        "any.only": validationMessages("hasMaxCap").only,
+        "any.required": validationMessages("hasMaxCap").required,
+        "boolean.base": validationMessages("hasMaxCap").boolean,
+      }),
+    maxCap: joi.when("hasMaxCap", {
+      is: true,
+      then: joi
+        .number()
+        .positive()
+        .precision(2)
+        .strict()
+        .min(10)
+        .messages({
+          "string.empty": validationMessages("maxCap").empty,
+          "any.only": validationMessages("maxCap").only,
+          "number.base": validationMessages("maxCap").number,
+          "any.required": validationMessages("maxCap").required,
+          "number.min": validationMessages("maxCap").min,
+          "number.positive": validationMessages("maxCap").positive,
+        }),
+      otherwise: joi.forbidden().messages({
+        "any.unknown": "maxCap is never allowed if hasMaxCap is false",
+      }),
+    }),
+    hasUsageLimit: joi
+      .boolean()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("hasUsageLimit").empty,
+        "any.only": validationMessages("hasUsageLimit").only,
+        "any.required": validationMessages("hasUsageLimit").required,
+        "boolean.base": validationMessages("hasUsageLimit").boolean,
+      }),
+    usageLimit: joi.number().when("hasUsageLimit", {
+      is: true,
+      then: joi
+        .number()
+        .positive()
+        .precision(2)
+        .strict()
+        .min(1)
+        .required()
+        .messages({
+          "string.empty": validationMessages("usageLimit").empty,
+          "any.only": validationMessages("usageLimit").only,
+          "number.base": validationMessages("usageLimit").number,
+          "any.required": validationMessages("usageLimit").required,
+          "number.min": validationMessages("usageLimit").min,
+          "number.positive": validationMessages("usageLimit").positive,
+        }),
+      otherwise: joi.forbidden().messages({
+        "any.unknown": "usageLimit is not allowed if hasUsageLimit is false",
+      }),
+    }),
+    discountType: joi
+      .string()
+      .valid("flat", "percent")
+      .optional()
+      .messages({
+        "any.required": validationMessages("discountType").required,
+        "string.empty": validationMessages("discountType").empty,
+        "any.only": validationMessages("discountType").only,
+        "string.base": validationMessages("discountType").string,
+        "any.valid": "discountType should be either flat or percent",
+      }),
+    value: joi
+      .number()
+      .strict()
+      .required()
+      .messages({
+        "string.empty": validationMessages("value").empty,
+        "any.only": validationMessages("value").only,
+        "number.base": validationMessages("value").number,
+        "any.required": validationMessages("value").required,
+        "number.positive": validationMessages("value").positive,
+      }),
+    quantity: joi
+      .number()
+      .positive()
+      .min(0)
+      .optional()
+      .messages({
+        "string.empty": validationMessages("quantity").empty,
+        "any.only": validationMessages("quantity").only,
+        "number.min": validationMessages("quantity").min,
+        "number.positive": validationMessages("quantity").positive,
+      }),
+    startDate: joi.when("hasExpiration", {
+      is: true,
+      then: joi
+        .date()
+        .custom(rejectPastDate)
+        .format("YYYY-MM-DD")
+        .required()
+        .messages({
+          "any.required": validationMessages("startDate").required,
+          "string.pattern.base":
+            "Provide a valid startDate in YYYY-MM-DD format",
+          "string.empty": validationMessages("startDate").empty,
+          "any.only": validationMessages("startDate").only,
+          "string.base": validationMessages("startDate").string,
+        }),
+      otherwise: joi.forbidden().messages({
+        "any.unknown":
+          "startDate is never allowed if hasExpiration is false or undefined",
+      }),
+    }),
+    endDate: joi.when("startDate", {
+      is: joi.exist(),
+      then: joi
+        .date()
+        .custom(dateChecker)
+        .format("YYYY-MM-DD")
+        .required()
+        .messages({
+          "any.required": validationMessages("endDate").required,
+          "string.pattern.base":
+            "Provide a valid matchDate in YYYY-MM-DD format",
+          "string.empty": validationMessages("endDate").empty,
+          "any.only": validationMessages("endDate").only,
+          "string.base": validationMessages("endDate").string,
+        }),
+      otherwise: joi.forbidden().messages({
+        "any.unknown": "endDate is not allowed if there is no startDate",
+      }),
+    }),
+  })
+  .options({ stripUnknown: true });
+
+export const updateDiscountSchema = joi
+  .object({
+    targets: joi
+      .array()
+      .items(
+        joi.object({
+          targetId: joi.string().custom(validateObjectId).required(),
+          targetType: joi
+            .string()
+            .valid("event", "ticket")
+            .required()
+            .messages({
+              "any.required": validationMessages("targetType").required,
+              "string.empty": validationMessages("targetType").empty,
+              "any.only": validationMessages("targetType").only,
+              "string.base": validationMessages("targetType").string,
+            }),
+        }),
+      )
+      .required()
+      .messages({
+        "any.required": validationMessages("targets").required,
+        "any.only": validationMessages("targets").only,
+      }),
+    code: joi
+      .string()
+      .required()
+      .messages({
+        "string.empty": validationMessages("code").empty,
+        "any.only": validationMessages("code").only,
+      }),
+    hasExpiration: joi
+      .boolean()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("hasExpiration").empty,
+        "any.only": validationMessages("hasExpiration").only,
+        "any.required": validationMessages("hasExpiration").required,
+        "boolean.base": validationMessages("hasExpiration").boolean,
+      }),
+    hasMaxCap: joi
+      .boolean()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("hasMaxCap").empty,
+        "any.only": validationMessages("hasMaxCap").only,
+        "any.required": validationMessages("hasMaxCap").required,
+        "boolean.base": validationMessages("hasMaxCap").boolean,
+      }),
+    maxCap: joi.when("hasMaxCap", {
+      is: true,
+      then: joi
+        .number()
+        .positive()
+        .precision(2)
+        .strict()
+        .min(10)
+        .messages({
+          "string.empty": validationMessages("maxCap").empty,
+          "any.only": validationMessages("maxCap").only,
+          "number.base": validationMessages("maxCap").number,
+          "any.required": validationMessages("maxCap").required,
+          "number.min": validationMessages("maxCap").min,
+          "number.positive": validationMessages("maxCap").positive,
+        }),
+      otherwise: joi.forbidden().messages({
+        "any.unknown": "maxCap is never allowed if hasMaxCap is false",
+      }),
+    }),
+    hasUsageLimit: joi
+      .boolean()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("hasUsageLimit").empty,
+        "any.only": validationMessages("hasUsageLimit").only,
+        "any.required": validationMessages("hasUsageLimit").required,
+        "boolean.base": validationMessages("hasUsageLimit").boolean,
+      }),
+    usageLimit: joi.number().when("hasUsageLimit", {
+      is: true,
+      then: joi
+        .number()
+        .positive()
+        .precision(2)
+        .strict()
+        .min(1)
+        .required()
+        .messages({
+          "string.empty": validationMessages("usageLimit").empty,
+          "any.only": validationMessages("usageLimit").only,
+          "number.base": validationMessages("usageLimit").number,
+          "any.required": validationMessages("usageLimit").required,
+          "number.min": validationMessages("usageLimit").min,
+          "number.positive": validationMessages("usageLimit").positive,
+        }),
+      otherwise: joi.forbidden().messages({
+        "any.unknown": "usageLimit is not allowed if hasUsageLimit is false",
+      }),
+    }),
+    discountType: joi
+      .string()
+      .valid("flat", "percent")
+      .optional()
+      .messages({
+        "any.required": validationMessages("discountType").required,
+        "string.empty": validationMessages("discountType").empty,
+        "any.only": validationMessages("discountType").only,
+        "string.base": validationMessages("discountType").string,
+        "any.valid": "discountType should be either flat or percent",
+      }),
+    value: joi
+      .number()
+      .strict()
+      .required()
+      .messages({
+        "string.empty": validationMessages("value").empty,
+        "any.only": validationMessages("value").only,
+        "number.base": validationMessages("value").number,
+        "any.required": validationMessages("value").required,
+        "number.positive": validationMessages("value").positive,
+      }),
+    quantity: joi
+      .number()
+      .positive()
+      .min(0)
+      .optional()
+      .messages({
+        "string.empty": validationMessages("quantity").empty,
+        "any.only": validationMessages("quantity").only,
+        "number.min": validationMessages("quantity").min,
+        "number.positive": validationMessages("quantity").positive,
+      }),
+    startDate: joi.when("hasExpiration", {
+      is: true,
+      then: joi
+        .date()
+        .custom(rejectPastDate)
+        .format("YYYY-MM-DD")
+        .required()
+        .messages({
+          "any.required": validationMessages("startDate").required,
+          "string.pattern.base":
+            "Provide a valid startDate in YYYY-MM-DD format",
+          "string.empty": validationMessages("startDate").empty,
+          "any.only": validationMessages("startDate").only,
+          "string.base": validationMessages("startDate").string,
+        }),
+      otherwise: joi.forbidden().messages({
+        "any.unknown":
+          "startDate is never allowed if hasExpiration is false or undefined",
+      }),
+    }),
+    endDate: joi.when("startDate", {
+      is: joi.exist(),
+      then: joi
+        .date()
+        .custom(dateChecker)
+        .format("YYYY-MM-DD")
+        .required()
+        .messages({
+          "any.required": validationMessages("endDate").required,
+          "string.pattern.base":
+            "Provide a valid matchDate in YYYY-MM-DD format",
+          "string.empty": validationMessages("endDate").empty,
+          "any.only": validationMessages("endDate").only,
+          "string.base": validationMessages("endDate").string,
+        }),
+      otherwise: joi.forbidden().messages({
+        "any.unknown": "endDate is not allowed if there is no startDate",
+      }),
+    }),
+  })
+  .options({ stripUnknown: true });
+
+export const userListSchema = joi
+  .object({
+    q: joi
+      .string()
+      .optional()
+      .messages({
+        "string.base": validationMessages("q").string,
+      }),
+    page: joi
+      .number()
+      .optional()
+      .messages({
+        "number.base": validationMessages("page").number,
+        "number.empty": validationMessages("page").empty,
+      }),
+
+    limit: joi.number().messages({
+      "number.base": "limit should be of type number",
+      "number.empty": "limit cannot be an empty param",
+      "any.required": validationMessages("limit").required,
+    }),
+    from: joi
+      .date()
+      .format("YYYY-MM-DD")
+      .optional()
+      .messages({
+        "any.required": validationMessages("from").required,
+        "string.pattern.base": "Provide a valid from in YYYY-MM-DD format",
+        "string.empty": validationMessages("from").empty,
+        "any.only": validationMessages("from").only,
+        "string.base": validationMessages("from").string,
+      }),
+    to: joi
+      .date()
+      .format("YYYY-MM-DD")
+      .optional()
+      .messages({
+        "any.required": validationMessages("to").required,
+        "string.pattern.base": "Provide a valid to in YYYY-MM-DD format",
+        "string.empty": validationMessages("to").empty,
+        "any.only": validationMessages("to").only,
+        "string.base": validationMessages("to").string,
+      }),
+    status: joi
+      .string()
+      .valid("active", "inactive")
+      .optional()
+      .messages({
+        "any.required": validationMessages("status").required,
+        "string.empty": validationMessages("status").empty,
+        "any.only": validationMessages("status").only,
+        "string.base": validationMessages("status").string,
+      }),
+
+    userType: joi
+      .string()
+      .valid("vendor")
+      .optional()
+      .messages({
+        "any.required": validationMessages("userType").required,
+        "string.empty": validationMessages("userType").empty,
+        "any.only": validationMessages("userType").only,
+        "string.base": validationMessages("userType").string,
+      }),
   })
   .options({ stripUnknown: true });

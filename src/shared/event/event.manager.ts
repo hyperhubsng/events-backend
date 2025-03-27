@@ -101,7 +101,7 @@ export class EventManager {
                 quantityAvailable: -ticket.quantity,
                 totalAmountSold: ticket.amount,
               },
-            }
+            },
           );
         }
       }

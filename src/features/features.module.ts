@@ -50,6 +50,12 @@ import {
   EventLog,
   EventtLogSchema,
 } from "@/datasources/mongodb/schemas/eventLog.schema";
+import {
+  Discount,
+  DiscountSchema,
+} from "@/datasources/mongodb/schemas/discount.schema";
+import { DiscountController } from "./discount/discount.controller";
+import { DiscountService } from "./discount/discount.service";
 
 @Module({
   controllers: [
@@ -58,6 +64,7 @@ import {
     EventsController,
     PaymentController,
     AttendeeController,
+    DiscountController,
   ],
   providers: [
     ...redisProviders,
@@ -85,6 +92,7 @@ import {
     S3Service,
     AwsService,
     AttendeeService,
+    DiscountService,
   ],
   imports: [
     MongooseModule.forFeature(
@@ -117,8 +125,12 @@ import {
           name: EventLog.name,
           schema: EventtLogSchema,
         },
+        {
+          name: Discount.name,
+          schema: DiscountSchema,
+        },
       ],
-      "hyperhubs"
+      "hyperhubs",
     ),
     JwtModule.register({
       global: true,

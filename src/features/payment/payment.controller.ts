@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Req, Res } from "@nestjs/common";
+import { Controller, Get, Post, Query, Req, Res } from "@nestjs/common";
 import { PaymentService } from "./payment.service";
 import { Request, Response } from "express";
 import { SuccessResponse } from "@/shared/response/success-response";
@@ -10,13 +10,13 @@ import { User } from "@/datasources/mongodb/schemas/user.schema";
 export class PaymentController {
   constructor(
     private readonly paymentService: PaymentService,
-    private readonly successResponse: SuccessResponse
+    private readonly successResponse: SuccessResponse,
   ) {}
 
   @PUBLIC()
   @Post("/paystack-webhook")
-  async paystackWebhookHandler(@Req() req: Request, @Body() body: any) {
-    this.paymentService.runPaystackWebhook(req, body);
+  async paystackWebhookHandler(@Req() req: Request) {
+    this.paymentService.runPaystackWebhook(req);
     return {
       status: true,
       message: "acknowledge",
@@ -35,7 +35,7 @@ export class PaymentController {
     @Req() req: Request,
     @Res() res: Response,
     @Query() query: { ref: string },
-    @UserDecorator() user: User
+    @UserDecorator() user: User,
   ) {
     const data = await this.paymentService.requeryPayment(query.ref, user);
     return this.successResponse.ok(res, req, { data });

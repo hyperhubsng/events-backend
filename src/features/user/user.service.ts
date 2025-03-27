@@ -1,12 +1,12 @@
 import { MongoDataServices } from "@/datasources/mongodb/mongodb.service";
 import { Injectable } from "@nestjs/common";
-import { AddUserDTO } from "@/features/user/user.dto";
+import { AddUserDTO, UserQueryDTO } from "@/features/user/user.dto";
 import { User } from "@/datasources/mongodb/schemas/user.schema";
 import { getTempUserKey, responseHash } from "@/constants";
 import { Types, _FilterQuery } from "mongoose";
 import { Request } from "express";
 import HTTPQueryParser from "@/shared/utils/http-query-parser";
-import { IPagination } from "@/shared/interface/interface";
+import { IPagination, numStrObj } from "@/shared/interface/interface";
 import { ResponseExtraData } from "@/shared/utils/http-response-extra-data";
 import { RedisService } from "@/datasources/redis/redis.service";
 
@@ -14,7 +14,7 @@ import { RedisService } from "@/datasources/redis/redis.service";
 export class UserService {
   constructor(
     private readonly mongoService: MongoDataServices,
-    private readonly redisService: RedisService
+    private readonly redisService: RedisService,
   ) {}
 
   async getUser(param: _FilterQuery<User>): Promise<User> {
@@ -27,7 +27,7 @@ export class UserService {
 
   async rejectUserTyype(
     userId: string | Types.ObjectId,
-    category: string
+    category: string,
   ): Promise<void> {
     try {
       const user = await this.getUser({ _id: userId });
@@ -47,7 +47,7 @@ export class UserService {
   async checkForExistingUser(queryParam: Record<string, any>[]): Promise<void> {
     const user: any = await this.mongoService.users.getOne(
       { $or: queryParam },
-      ["email"]
+      ["email"],
     );
     if (user) {
       return Promise.reject(responseHash.duplicateExists);
@@ -61,7 +61,7 @@ export class UserService {
   async updateUser(body: Partial<User>, user: User) {
     return await this.mongoService.users.updateOneOrCreateWithOldData(
       { _id: user._id },
-      body
+      body,
     );
   }
   async getUserById(_id: Types.ObjectId) {
@@ -72,28 +72,41 @@ export class UserService {
     }
     return null;
   }
+  httpQueryFormulator(httpQuery: UserQueryDTO): Record<string, numStrObj> {
+    let query: Record<string, numStrObj> = {};
+    if (httpQuery.q) {
+      const queryTerm = httpQuery.q;
+      query = {
+        $or: [
+          {
+            lastName: new RegExp(`^${queryTerm}$`, "i"),
+          },
+          {
+            firstName: new RegExp(`^${queryTerm}$`, "i"),
+          },
+        ],
+      };
+    }
+    if (httpQuery.userType) {
+      query = {
+        ...query,
+        userType: httpQuery.userType,
+      };
+    }
+    if (httpQuery.status) {
+      const userStatus = httpQuery.status === "active" ? "active" : "inactive";
+      query = {
+        ...query,
+        accountStatus: userStatus,
+      };
+    }
+    return query;
+  }
 
-  async getUsers(req: Request, user: User) {
+  async getUsers(req: Request, httpQuery: UserQueryDTO, user: User) {
     try {
       const { skip, docLimit, filters, populate } = HTTPQueryParser(req.query);
-      let query: Record<string, any> = {
-        _id: {
-          $nin: [user._id],
-        },
-      };
-      if (req.query.userType) {
-        query = {
-          ...query,
-          userType: req.query.userType,
-        };
-      }
-      if (req.query.q) {
-        query = {
-          ...query,
-          brandName: new RegExp(`^${req.query.q}$`, "i"),
-        };
-      }
-
+      const query: Record<string, any> = this.httpQueryFormulator(httpQuery);
       filters.push("-password");
 
       const users = await this.mongoService.users.getAll(
@@ -102,26 +115,37 @@ export class UserService {
         populate,
         docLimit,
         skip,
-        "createdAt"
+        "createdAt",
       );
 
       const userCount = await this.mongoService.users.count(query);
-      query.accountStatus = "active";
-      const inactiveUsersCount = await this.mongoService.users.count(query);
-      const extraData: IPagination = ResponseExtraData(
-        req,
-        users.length,
-        userCount
-      );
+      const extraData: IPagination = ResponseExtraData(req, userCount);
 
+      //Const Stats Data
+      const statsQuery: Record<string, string> = {};
+      if (httpQuery.userType) {
+        statsQuery.userType = httpQuery.userType;
+      }
+
+      const [activeUsers, inactiveUsers] = await Promise.all([
+        this.mongoService.users.count({
+          ...statsQuery,
+          accountStatus: "active",
+        }),
+        this.mongoService.users.count({
+          ...statsQuery,
+          accountStatus: "inactive",
+        }),
+      ]);
+      //await this.redisService.
       return {
         status: "success",
         data: {
           users,
           stats: {
-            total: userCount,
-            inactive: inactiveUsersCount,
-            active: userCount - inactiveUsersCount,
+            total: activeUsers + inactiveUsers,
+            inactive: inactiveUsers,
+            active: activeUsers,
           },
         },
         extraData: extraData,
@@ -146,7 +170,7 @@ export class UserService {
 
   async checkUserUniqueness(
     fieldsToCheck: Record<string, any>[],
-    hasEmail: true
+    hasEmail: true,
   ): Promise<void> {
     try {
       //Check to Ensure Email is Unique

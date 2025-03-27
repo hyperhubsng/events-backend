@@ -1,16 +1,6 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Query,
-  Req,
-  Res,
-} from "@nestjs/common";
+import { Controller, Get, Param, Query, Req, Res } from "@nestjs/common";
 import { Request, Response } from "express";
 import { SuccessResponse } from "@/shared/response/success-response";
-import { PUBLIC } from "../auth/public.decorator";
 import { UserDecorator } from "../user/user.decorator";
 import { User } from "@/datasources/mongodb/schemas/user.schema";
 import { AttendeeService } from "./attendee.service";
@@ -20,7 +10,7 @@ import { HttpQueryDTO } from "./attendee.dto";
 export class AttendeeController {
   constructor(
     private readonly successResponse: SuccessResponse,
-    private readonly attendeeService: AttendeeService
+    private readonly attendeeService: AttendeeService,
   ) {}
 
   @Get("/:attendeeCode")
@@ -29,12 +19,12 @@ export class AttendeeController {
     @Res() res: Response,
     @Param("attendeeCode") attendeeCode: string,
     @Query(new AttendeeQueryPipe()) query: HttpQueryDTO,
-    @UserDecorator() user: User
+    @UserDecorator() user: User,
   ) {
     const data = await this.attendeeService.manageGuest(
       attendeeCode,
       query,
-      user
+      user,
     );
     return this.successResponse.ok(res, req, { data });
   }

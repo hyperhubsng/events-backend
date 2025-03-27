@@ -191,3 +191,8 @@ export interface IAttendee {
 export interface AuthenticatedRequest extends Request {
   user?: Record<string, any>;
 }
+
+export interface IDiscountEntity {
+  targetType: string;
+  targetId: Types.ObjectId;
+}

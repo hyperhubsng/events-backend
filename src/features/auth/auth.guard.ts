@@ -21,7 +21,7 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
-    private readonly userService: UserService
+    private readonly userService: UserService,
   ) {
     this.secret = appConfig.secret;
   }
@@ -55,7 +55,7 @@ export class AuthGuard implements CanActivate {
 
       if (!token) {
         throw new UnauthorizedException(
-          "Unauthorized, provide authorization token"
+          "Unauthorized, provide authorization token",
         );
       }
 
@@ -77,7 +77,7 @@ export class AuthGuard implements CanActivate {
   async validateUser(payload: JwtUnion, req: AuthenticatedRequest) {
     try {
       const user = await this.userService.getUserById(
-        payload.userId as unknown as Types.ObjectId
+        payload.userId as unknown as Types.ObjectId,
       );
       if (!user) {
         return Promise.reject(responseHash.userNotFound);

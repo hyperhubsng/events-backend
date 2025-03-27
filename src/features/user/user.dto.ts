@@ -7,3 +7,9 @@ export class AddUserDTO {
   companyName: string;
   website: string;
 }
+
+export class UserQueryDTO {
+  q: string;
+  userType: string;
+  status: string;
+}

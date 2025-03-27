@@ -55,7 +55,7 @@ export class Paystack implements PaymentProcessor {
   async confirmPaymentWithCallback(transactionId: string | number) {
     try {
       const { data: paystackResponse } = await this.verifyPayment(
-        transactionId
+        transactionId,
       );
       const status = paystackResponse.status;
       if (!Object.is(status, "success")) {

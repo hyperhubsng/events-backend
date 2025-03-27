@@ -1,9 +1,20 @@
-import { Body, Controller, Get, Param, Put, Req, Res } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Put,
+  Query,
+  Req,
+  Res,
+} from "@nestjs/common";
 import { UserService } from "./user.service";
 import { SuccessResponse } from "@/shared/response/success-response";
 import { Response, Request } from "express";
 import { UserDecorator } from "./user.decorator";
 import { User } from "@/datasources/mongodb/schemas/user.schema";
+import { UserQueryDTO } from "./user.dto";
+import { UserQueryPipe } from "./user.pipe";
 
 @Controller("users")
 export class UserController {
@@ -16,8 +27,13 @@ export class UserController {
     @Req() req: Request,
     @Res() res: Response,
     @UserDecorator() user: User,
+    @Query(new UserQueryPipe()) httpQuery: UserQueryDTO,
   ) {
-    const { data, extraData } = await this.userService.getUsers(req, user);
+    const { data, extraData } = await this.userService.getUsers(
+      req,
+      httpQuery,
+      user,
+    );
     this.successResponse.ok(res, req, { data, pagination: extraData });
   }
   @Put(":id")

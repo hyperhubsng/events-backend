@@ -6,7 +6,6 @@ import {
   Get,
   Param,
   Post,
-  Put,
   Query,
   Req,
   Res,
@@ -43,21 +42,21 @@ export class EventsController {
   constructor(
     private readonly successResponse: SuccessResponse,
     private readonly eventService: EventService,
-    private readonly paymentService: PaymentService
+    private readonly paymentService: PaymentService,
   ) {}
 
   @Post()
   @UseInterceptors(
     FilesInterceptor("files", MAX_FILES, {
       storage: multer.memoryStorage(),
-    })
+    }),
   )
   async createEvent(
     @Req() req: Request,
     @Res() res: Response,
     @Body(new AddEventPipe()) body: AddEventDTO,
     @UploadedFiles() files: Array<Express.Multer.File>,
-    @UserDecorator() user: User
+    @UserDecorator() user: User,
   ) {
     if (!files || files.length === 0) {
       throw new BadRequestException("Upload a file ");
@@ -71,12 +70,12 @@ export class EventsController {
     @Req() req: Request,
     @Res() res: Response,
     @Query(new EventQueryPipe()) query: HttpQueryDTO,
-    @UserDecorator() user: User
+    @UserDecorator() user: User,
   ) {
     const { data, extraData } = await this.eventService.listEvents(
       req,
       query,
-      user
+      user,
     );
     await this.successResponse.ok(res, req, { data, pagination: extraData });
   }
@@ -85,7 +84,7 @@ export class EventsController {
   @Get("/verify-paystack-payment")
   async verifyPaystackPayment(@Req() req: Request, @Res() res: Response) {
     const data = await this.paymentService.runPaystackCallback(
-      req.query.reference as string
+      req.query.reference as string,
     );
     await this.successResponse.ok(res, req, { data });
   }
@@ -95,7 +94,7 @@ export class EventsController {
   async listCommunitiesForAnons(
     @Req() req: Request,
     @Res() res: Response,
-    @Query(new EventQueryPipe()) query: HttpQueryDTO
+    @Query(new EventQueryPipe()) query: HttpQueryDTO,
   ) {
     query.status = "upcoming";
     const { data, extraData } = await this.eventService.listEvents(req, query);
@@ -108,7 +107,7 @@ export class EventsController {
     @Res() res: Response,
     @Body(new CreateTicketPipe()) body: CreateTicketDTO,
     @UserDecorator() user: User,
-    @Param("eventId", new ObjectIdValidationPipe()) eventId: string
+    @Param("eventId", new ObjectIdValidationPipe()) eventId: string,
   ) {
     const data = await this.eventService.createTicket(body, user, eventId);
     await this.successResponse.ok(res, req, { data });
@@ -120,7 +119,7 @@ export class EventsController {
     @Req() req: Request,
     @Res() res: Response,
     @Param("eventId", new ObjectIdValidationPipe()) eventId: string,
-    @UserDecorator() user: User
+    @UserDecorator() user: User,
   ) {
     const data = await this.eventService.listTickets(req, eventId, user);
     await this.successResponse.ok(res, req, { data });
@@ -132,7 +131,7 @@ export class EventsController {
     @Req() req: Request,
     @Res() res: Response,
     @Param("eventId", new ObjectIdValidationPipe()) eventId: string,
-    @Body(new PurchaseTicketPipe()) body: PurchaseTicketDTO
+    @Body(new PurchaseTicketPipe()) body: PurchaseTicketDTO,
   ) {
     const data = await this.eventService.buyTicket(eventId, body);
     await this.successResponse.ok(res, req, { data });
@@ -142,11 +141,11 @@ export class EventsController {
   async getSalesReport(
     @Req() req: Request,
     @Res() res: Response,
-    @Param("eventId", new ObjectIdValidationPipe()) eventId: string
+    @Param("eventId", new ObjectIdValidationPipe()) eventId: string,
   ) {
     const { data, extraData } = await this.eventService.getSalesReport(
       eventId,
-      req
+      req,
     );
     await this.successResponse.ok(res, req, { data, pagination: extraData });
   }
@@ -155,11 +154,11 @@ export class EventsController {
   async getEventGuests(
     @Req() req: Request,
     @Res() res: Response,
-    @Param("eventId", new ObjectIdValidationPipe()) eventId: string
+    @Param("eventId", new ObjectIdValidationPipe()) eventId: string,
   ) {
     const { data, extraData } = await this.eventService.getEventAttendees(
       eventId,
-      req
+      req,
     );
     await this.successResponse.ok(res, req, { data, pagination: extraData });
   }
@@ -169,7 +168,7 @@ export class EventsController {
   async getEvent(
     @Req() req: Request,
     @Res() res: Response,
-    @Param("id", ObjectIdValidationPipe) id: string
+    @Param("id", ObjectIdValidationPipe) id: string,
   ) {
     const data = await this.eventService.getOneEvent({
       _id: new Types.ObjectId(id),

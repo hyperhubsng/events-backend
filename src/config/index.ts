@@ -4,7 +4,7 @@ import * as winston from "winston";
 import * as fs from "fs";
 import { S3Client } from "@aws-sdk/client-s3";
 import { fromEnv } from "@aws-sdk/credential-providers";
-const { SESClient } = require("@aws-sdk/client-ses");
+import { SESClient } from "@aws-sdk/client-ses";
 
 export const sesClient = new SESClient({
   region: process.env.AWS_REGION,

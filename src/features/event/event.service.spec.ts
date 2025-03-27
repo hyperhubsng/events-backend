@@ -10,9 +10,9 @@ import { User } from "@/datasources/mongodb/schemas/user.schema";
 
 describe("Event Service", () => {
   let eventService: EventService;
-  let userService: UserService;
-  let paymentService: PaymentService;
-  let mongoService: MongoDataServices;
+  // let userService: UserService;
+  // let paymentService: PaymentService;
+  // let mongoService: MongoDataServices;
 
   let mockRequest: Partial<Request>;
   let mockHttpQuery: HttpQueryDTO;
@@ -48,9 +48,9 @@ describe("Event Service", () => {
     }).compile();
 
     eventService = module.get<EventService>(EventService);
-    paymentService = module.get<PaymentService>(PaymentService);
-    userService = module.get<UserService>(UserService);
-    mongoService = module.get<MongoDataServices>(MongoDataServices);
+    // paymentService = module.get<PaymentService>(PaymentService);
+    // userService = module.get<UserService>(UserService);
+    // mongoService = module.get<MongoDataServices>(MongoDataServices);
 
     mockRequest = {
       query: {},

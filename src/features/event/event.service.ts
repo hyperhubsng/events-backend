@@ -38,12 +38,12 @@ export class EventService {
     private readonly userService: UserService,
     private readonly paymentService: PaymentService,
     private readonly s3Service: S3Service,
-    private readonly redisService: RedisService
+    private readonly redisService: RedisService,
   ) {}
   async addEvent(
     files: Array<Express.Multer.File>,
     data: AddEventDTO,
-    user: User
+    user: User,
   ) {
     try {
       const { ownerId, coordinates } = data;
@@ -55,7 +55,7 @@ export class EventService {
       }
       await this.userService.rejectUserTyype(ownerId, "admin");
       const filePromises = files.map((file) =>
-        this.s3Service.putObject(`${uuid()}-${file.originalname}`, file.buffer)
+        this.s3Service.putObject(`${uuid()}-${file.originalname}`, file.buffer),
       );
       const fileUrls = await Promise.all(filePromises);
       data.createdBy = user._id;
@@ -67,7 +67,7 @@ export class EventService {
         };
       }
       return await this.mongoService.events.create(
-        data as unknown as Partial<Event>
+        data as unknown as Partial<Event>,
       );
     } catch (err) {
       return Promise.reject(err);
@@ -80,7 +80,7 @@ export class EventService {
     try {
       //const newFileName = `${uuidv4()}-${originalname}`;
       const filePromises = files.map((file) =>
-        this.s3Service.putObject(file.originalname, file.buffer)
+        this.s3Service.putObject(file.originalname, file.buffer),
       );
       const fileUrls = await Promise.all(filePromises);
       errorFileTracker = fileUrls;
@@ -98,7 +98,7 @@ export class EventService {
 
   httpQueryFormulator(
     httpQuery: HttpQueryDTO,
-    user?: User
+    user?: User,
   ): Record<string, numStrObj> {
     let query: Record<string, numStrObj> = {};
     if (httpQuery.q) {
@@ -173,11 +173,7 @@ export class EventService {
       }
       const queryResult = await this.aggregateEvent(query, skip, docLimit);
       const queryCount = await this.mongoService.events.count(query);
-      const extraData: IPagination = ResponseExtraData(
-        req,
-        queryResult.length,
-        queryCount
-      );
+      const extraData: IPagination = ResponseExtraData(req, queryCount);
 
       return {
         status: "success",
@@ -292,11 +288,7 @@ export class EventService {
       }
       const queryResult = await this.aggregateEvent(query, skip, docLimit);
       const queryCount = await this.mongoService.events.count(query);
-      const extraData: IPagination = ResponseExtraData(
-        req,
-        queryResult.length,
-        queryCount
-      );
+      const extraData: IPagination = ResponseExtraData(req, queryCount);
 
       return {
         status: "success",
@@ -372,7 +364,7 @@ export class EventService {
         if (event.status !== "upcoming") {
           await this.mongoService.events.updateOne(
             { _id: eventId },
-            { status: "upcoming" }
+            { status: "upcoming" },
           );
         }
       }
@@ -504,7 +496,7 @@ export class EventService {
       await this.redisService.setEx(
         eventTicketsKey,
         JSON.stringify(queryResult),
-        60 * 60 * 24
+        60 * 60 * 24,
       );
       return queryResult;
     } catch (e) {
@@ -643,11 +635,7 @@ export class EventService {
       const queryResult = await this.aggregateEventSales(query, skip, docLimit);
       const statsQueryResult = await this.getTicketSalesSummary(statsQuery);
       const queryCount = await this.mongoService.attendees.count(query);
-      const extraData: IPagination = ResponseExtraData(
-        req,
-        queryResult.length,
-        queryCount
-      );
+      const extraData: IPagination = ResponseExtraData(req, queryCount);
 
       return {
         status: "success",
@@ -696,11 +684,7 @@ export class EventService {
 
       const queryResult = await this.aggregateEventSales(query, skip, docLimit);
       const queryCount = await this.mongoService.attendees.count(query);
-      const extraData: IPagination = ResponseExtraData(
-        req,
-        queryResult.length,
-        queryCount
-      );
+      const extraData: IPagination = ResponseExtraData(req, queryCount);
 
       return {
         status: "success",
@@ -728,7 +712,7 @@ export class EventService {
   async aggregateEventSales(
     query: any,
     skip: number = 0,
-    limit: number = 1000
+    limit: number = 1000,
   ) {
     try {
       const result = await this.mongoService.attendees.aggregateRecords([
