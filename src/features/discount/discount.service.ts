@@ -16,12 +16,12 @@ import { Discount } from "@/datasources/mongodb/schemas/discount.schema";
 export class DiscountService {
   constructor(
     private readonly mongoService: MongoDataServices,
-    private readonly userService: UserService,
+    private readonly userService: UserService
   ) {}
 
   async listDiscounts(req: Request, httpQuery: any, user?: User) {
     try {
-      const { skip, docLimit, dbQueryParam } = HTTPQueryParser(req.query);
+      const { skip, docLimit } = HTTPQueryParser(req.query);
 
       const query: Record<string, any> = {};
       if (httpQuery.owner) {
@@ -101,7 +101,7 @@ export class DiscountService {
 
   async addDiscount(data: DiscountDTO, user: User) {
     try {
-      const { targets, ownerId, code, startDate, endDate } = data;
+      const { targets, ownerId } = data;
       if (user.userType === "admin" && !ownerId) {
         return Promise.reject({
           ...responseHash.badPayload,
@@ -137,8 +137,6 @@ export class DiscountService {
           targets,
         });
       }
-      //Apply the discount to the targets, have a discount log also that
-      // holds information about discount or just use that our logs
       return await this.mongoService.discounts.createMany(discountParam);
     } catch (err) {
       return Promise.reject(err);
@@ -167,7 +165,7 @@ export class DiscountService {
       }
       return await this.mongoService.discounts.updateOneOrCreateWithOldData(
         query,
-        body,
+        body
       );
     } catch (err) {
       return Promise.reject(err);

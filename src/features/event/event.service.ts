@@ -9,11 +9,7 @@ import HTTPQueryParser from "@/shared/utils/http-query-parser";
 import { ResponseExtraData } from "@/shared/utils/http-response-extra-data";
 import { Injectable } from "@nestjs/common";
 import { Request } from "express";
-import {
-  PAYMENT_PROCESSORS,
-  TICKET_PURCHASE_MESSAGE,
-  responseHash,
-} from "@/constants";
+import { PAYMENT_PROCESSORS, responseHash } from "@/constants";
 import { PipelineStage, Types, _FilterQuery } from "mongoose";
 import { UserService } from "../user/user.service";
 import {
@@ -71,28 +67,6 @@ export class EventService {
       );
     } catch (err) {
       return Promise.reject(err);
-    }
-  }
-
-  async uploadDisco(req: Request, files: Array<Express.Multer.File>) {
-    let errorFileTracker;
-    let hasError = false;
-    try {
-      //const newFileName = `${uuidv4()}-${originalname}`;
-      const filePromises = files.map((file) =>
-        this.s3Service.putObject(file.originalname, file.buffer),
-      );
-      const fileUrls = await Promise.all(filePromises);
-      errorFileTracker = fileUrls;
-      return fileUrls;
-    } catch (err) {
-      hasError = true;
-      return Promise.reject(err);
-    } finally {
-      //If there is an error , delete the files
-      if (hasError) {
-        //delete the files
-      }
     }
   }
 
@@ -653,8 +627,9 @@ export class EventService {
   async getEventAttendees(eventId: string, req: Request, user?: User) {
     try {
       const { skip, docLimit, dbQueryParam } = HTTPQueryParser(req.query);
+      const transformedEventId = new Types.ObjectId(eventId);
       const query: Record<string, any> = {
-        eventId: new Types.ObjectId(eventId),
+        eventId: transformedEventId,
       };
       if (dbQueryParam.createdAt) {
         query.createdAt = dbQueryParam.createdAt;
@@ -667,7 +642,7 @@ export class EventService {
       }
       const statsQuery: Record<string, any> = {};
       if (req.query.ticket && req.query.ticket === "all") {
-        statsQuery.eventId = new Types.ObjectId(eventId);
+        statsQuery.eventId = transformedEventId;
       }
       if (req.query.ticket && req.query.ticket !== "all") {
         const ticketId = req.query.ticket as string;
@@ -682,14 +657,24 @@ export class EventService {
         });
       }
 
-      const queryResult = await this.aggregateEventSales(query, skip, docLimit);
-      const queryCount = await this.mongoService.attendees.count(query);
-      const extraData: IPagination = ResponseExtraData(req, queryCount);
+      const [queryResult, queryCount, totalCheckin] = await Promise.all([
+        this.aggregateEventSales(query, skip, docLimit),
+        this.mongoService.attendees.count(query),
+        this.mongoService.attendees.count({
+          eventId: transformedEventId,
+          isChecked: true,
+        }),
+      ]);
 
+      const extraData: IPagination = ResponseExtraData(req, queryCount);
       return {
         status: "success",
         data: {
           guests: queryResult,
+          stats: {
+            totalTickets: queryCount,
+            totalCheckin: totalCheckin,
+          },
         },
         extraData: extraData,
       };

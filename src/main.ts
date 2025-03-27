@@ -13,5 +13,5 @@ import { appConfig } from "./config";
   app.use(useragent.express());
   app.use(compression());
   app.useGlobalFilters(new NotFoundFilter());
-  await app.listen(appConfig.serverPort);
+  await app.listen(3002);
 })();
