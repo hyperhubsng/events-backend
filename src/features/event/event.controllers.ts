@@ -9,6 +9,7 @@ import {
   Query,
   Req,
   Res,
+  SetMetadata,
   UploadedFiles,
   UseInterceptors,
 } from "@nestjs/common";
@@ -66,6 +67,7 @@ export class EventsController {
   }
 
   @Get()
+  @SetMetadata("accessTitle", "ListEvents")
   async listEvents(
     @Req() req: Request,
     @Res() res: Response,

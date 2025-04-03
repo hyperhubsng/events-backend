@@ -26,6 +26,12 @@ import {
 } from "@/datasources/mongodb/schemas/ticket.schema";
 import { EventLog, EventLogDocument } from "./schemas/eventLog.schema";
 import { Discount, DiscountDocument } from "./schemas/discount.schema";
+import {
+  Permission,
+  PermissionDocument,
+} from "@/datasources/mongodb/schemas/permission.schema";
+
+import { Role, RoleDocument } from "@/datasources/mongodb/schemas/role.schema";
 
 interface IMatch {
   $match: Record<string, any>;
@@ -312,6 +318,8 @@ export abstract class MongoDataServices {
   abstract attendees: IGenericRepository<Attendee>;
   abstract eventLogs: IGenericRepository<EventLog>;
   abstract discounts: IGenericRepository<Discount>;
+  abstract permissions: IGenericRepository<Permission>;
+  abstract roles: IGenericRepository<Role>;
 }
 
 @Injectable()
@@ -324,6 +332,8 @@ export class NosqlService implements MongoDataServices, OnApplicationBootstrap {
   attendees: MongoGenericRepository<Attendee>;
   eventLogs: MongoGenericRepository<EventLog>;
   discounts: MongoGenericRepository<Discount>;
+  permissions: MongoGenericRepository<Permission>;
+  roles: MongoGenericRepository<Role>;
   constructor(
     @InjectModel(User.name, "hyperhubs")
     private UserRepository: Model<UserDocument>,
@@ -341,6 +351,10 @@ export class NosqlService implements MongoDataServices, OnApplicationBootstrap {
     private EventLogRepository: Model<EventLogDocument>,
     @InjectModel(Discount.name, "hyperhubs")
     private DiscountRepository: Model<DiscountDocument>,
+    @InjectModel(Permission.name, "hyperhubs")
+    private PermissionRepository: Model<PermissionDocument>,
+    @InjectModel(Role.name, "hyperhubs")
+    private RoleRepository: Model<RoleDocument>,
   ) {}
 
   onApplicationBootstrap() {
@@ -360,5 +374,9 @@ export class NosqlService implements MongoDataServices, OnApplicationBootstrap {
     this.discounts = new MongoGenericRepository<Discount>(
       this.DiscountRepository,
     );
+    this.permissions = new MongoGenericRepository<Permission>(
+      this.PermissionRepository,
+    );
+    this.roles = new MongoGenericRepository<Role>(this.RoleRepository);
   }
 }

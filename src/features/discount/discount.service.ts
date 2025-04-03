@@ -16,7 +16,7 @@ import { Discount } from "@/datasources/mongodb/schemas/discount.schema";
 export class DiscountService {
   constructor(
     private readonly mongoService: MongoDataServices,
-    private readonly userService: UserService
+    private readonly userService: UserService,
   ) {}
 
   async listDiscounts(req: Request, httpQuery: any, user?: User) {
@@ -165,7 +165,7 @@ export class DiscountService {
       }
       return await this.mongoService.discounts.updateOneOrCreateWithOldData(
         query,
-        body
+        body,
       );
     } catch (err) {
       return Promise.reject(err);

@@ -13,6 +13,7 @@ import { UserService } from "../user/user.service";
 import { JwtUnion } from "@/shared/interface/interface";
 import { Types } from "mongoose";
 import { AuthenticatedRequest } from "@/shared/interface/interface";
+import { PermissionService } from "../permission/permission.service";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -22,6 +23,7 @@ export class AuthGuard implements CanActivate {
     private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
     private readonly userService: UserService,
+    private readonly permissionService: PermissionService,
   ) {
     this.secret = appConfig.secret;
   }
@@ -65,7 +67,7 @@ export class AuthGuard implements CanActivate {
 
       AuthGuard.validateTokenExpiration(payload.exp);
       await this.validateUser(payload, request);
-      return true;
+      return await this.permissionService.verifyPermission(context);
     } catch (e) {
       if (e.name === "JsonWebTokenError") {
         throw new UnauthorizedException("Please,login again");

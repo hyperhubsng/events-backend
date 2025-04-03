@@ -56,6 +56,13 @@ import {
 } from "@/datasources/mongodb/schemas/discount.schema";
 import { DiscountController } from "./discount/discount.controller";
 import { DiscountService } from "./discount/discount.service";
+import { PermissionController } from "./permission/permission.controller";
+import { PermissionService } from "./permission/permission.service";
+import {
+  Permission,
+  PermissionSchema,
+} from "@/datasources/mongodb/schemas/permission.schema";
+import { Role, RoleSchema } from "@/datasources/mongodb/schemas/role.schema";
 
 @Module({
   controllers: [
@@ -65,6 +72,7 @@ import { DiscountService } from "./discount/discount.service";
     PaymentController,
     AttendeeController,
     DiscountController,
+    PermissionController,
   ],
   providers: [
     ...redisProviders,
@@ -93,6 +101,7 @@ import { DiscountService } from "./discount/discount.service";
     AwsService,
     AttendeeService,
     DiscountService,
+    PermissionService,
   ],
   imports: [
     MongooseModule.forFeature(
@@ -128,6 +137,14 @@ import { DiscountService } from "./discount/discount.service";
         {
           name: Discount.name,
           schema: DiscountSchema,
+        },
+        {
+          name: Permission.name,
+          schema: PermissionSchema,
+        },
+        {
+          name: Role.name,
+          schema: RoleSchema,
         },
       ],
       "hyperhubs",

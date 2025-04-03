@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, HydratedDocument } from "mongoose";
+import { Document, HydratedDocument, Types } from "mongoose";
 import * as bcrypt from "bcryptjs";
 
 import { appConfig } from "@/config";
@@ -58,6 +58,12 @@ export class User extends Document {
     default: "active",
   })
   accountStatus: string;
+
+  @Prop({
+    type: Types.ObjectId,
+    ref: "roles",
+  })
+  role: Types.ObjectId;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

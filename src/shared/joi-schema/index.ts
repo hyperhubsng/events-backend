@@ -973,3 +973,50 @@ export const userListSchema = joi
       }),
   })
   .options({ stripUnknown: true });
+
+export const addPermissionSchema = joi
+  .object({
+    resource: joi
+      .string()
+      .valid("events", "tickets", "discounts", "attendees")
+      .required()
+      .messages({
+        "string.empty": validationMessages("resource").empty,
+        "any.only": validationMessages("resource").only,
+      }),
+    title: joi
+      .string()
+      .required()
+      .messages({
+        "string.empty": validationMessages("title").empty,
+        "any.only": validationMessages("title").only,
+      }),
+  })
+  .options({ stripUnknown: true });
+
+export const addRoleSchema = joi
+  .object({
+    permissions: joi
+      .array()
+      .items(joi.string())
+      .required()
+      .messages({
+        "string.empty": validationMessages("resource").empty,
+        "any.only": validationMessages("resource").only,
+      }),
+    title: joi
+      .string()
+      .required()
+      .messages({
+        "string.empty": validationMessages("title").empty,
+        "any.only": validationMessages("title").only,
+      }),
+    description: joi
+      .string()
+      .required()
+      .messages({
+        "string.empty": validationMessages("description").empty,
+        "any.only": validationMessages("description").only,
+      }),
+  })
+  .options({ stripUnknown: true });
