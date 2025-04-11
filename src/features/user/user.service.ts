@@ -1,6 +1,10 @@
 import { MongoDataServices } from "@/datasources/mongodb/mongodb.service";
 import { Injectable } from "@nestjs/common";
-import { AddUserDTO, UserQueryDTO } from "@/features/user/user.dto";
+import {
+  AddOrganisationDTO,
+  AddUserDTO,
+  UserQueryDTO,
+} from "@/features/user/user.dto";
 import { User } from "@/datasources/mongodb/schemas/user.schema";
 import { getTempUserKey, responseHash } from "@/constants";
 import { Types, _FilterQuery } from "mongoose";
@@ -59,10 +63,18 @@ export class UserService {
   }
 
   async updateUser(body: Partial<User>, user: User) {
+    if (user.needsToChangePassword) {
+      body.needsToChangePassword = false;
+      body.accountStatus = "active";
+    }
     return await this.mongoService.users.updateOneOrCreateWithOldData(
       { _id: user._id },
       body,
     );
+  }
+
+  async createOrganisation(body: AddOrganisationDTO) {
+    return await this.mongoService.organisations.create(body);
   }
   async getUserById(_id: Types.ObjectId) {
     const user = await this.mongoService.users.getOneWithAllFields({ _id });
@@ -105,8 +117,20 @@ export class UserService {
 
   async getUsers(req: Request, httpQuery: UserQueryDTO, user: User) {
     try {
+      if (
+        !user.currentOrganisation &&
+        !["admin", "adminUser"].includes(user.userType)
+      ) {
+        return Promise.reject(responseHash.forbiddenAction);
+      }
+
       const { skip, docLimit, filters, populate } = HTTPQueryParser(req.query);
       const query: Record<string, any> = this.httpQueryFormulator(httpQuery);
+      if (!["admin", "adminUser"].includes(user.userType)) {
+        query.currentOrganisation = new Types.ObjectId(
+          user.currentOrganisation,
+        );
+      }
       filters.push("-password");
 
       const users = await this.mongoService.users.getAll(
@@ -122,11 +146,15 @@ export class UserService {
       const extraData: IPagination = ResponseExtraData(req, userCount);
 
       //Const Stats Data
-      const statsQuery: Record<string, string> = {};
+      const statsQuery: Record<string, any> = {};
       if (httpQuery.userType) {
         statsQuery.userType = httpQuery.userType;
       }
-
+      if (!["admin", "adminUser"].includes(user.userType)) {
+        statsQuery.currentOrganisation = new Types.ObjectId(
+          user.currentOrganisation,
+        );
+      }
       const [activeUsers, inactiveUsers] = await Promise.all([
         this.mongoService.users.count({
           ...statsQuery,
@@ -134,7 +162,9 @@ export class UserService {
         }),
         this.mongoService.users.count({
           ...statsQuery,
-          accountStatus: "inactive",
+          accountStatus: {
+            $in: ["inactive", "locked"],
+          },
         }),
       ]);
       //await this.redisService.

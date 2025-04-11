@@ -123,8 +123,8 @@ export const signupSchema = joi
       }),
     userType: joi
       .string()
-      .valid("vendor")
-      .optional()
+      .valid("vendor", "vendorUser", "adminUser")
+      .required()
       .messages({
         "string.empty": validationMessages("userType").empty,
         "any.required": validationMessages("userType").required,
@@ -185,17 +185,47 @@ export const signupSchema = joi
         "any.only": validationMessages("website").only,
         "string.base": validationMessages("website").string,
       }),
-    phoneNumber: joi
-      .string()
-      .required()
-      .pattern(new RegExp("^(\\+?234|0)?[789][01]\\d{8}$"))
-      .messages({
-        "string.pattern.base": "Provide a valid phone number",
-        "string.empty": validationMessages("phoneNumber").empty,
-        "any.required": validationMessages("phoneNumber").required,
-        "any.only": validationMessages("phoneNumber").only,
-        "string.base": validationMessages("phoneNumber").string,
+    phoneNumber: joi.when("userType", {
+      is: ["vendor"],
+      then: joi
+        .string()
+        .required()
+        .pattern(new RegExp("^(\\+?234|0)?[789][01]\\d{8}$"))
+        .messages({
+          "string.pattern.base": "Provide a valid phone number",
+          "string.empty": validationMessages("phoneNumber").empty,
+          "any.required": validationMessages("phoneNumber").required,
+          "any.only": validationMessages("phoneNumber").only,
+          "string.base": validationMessages("phoneNumber").string,
+        }),
+      otherwise: joi
+        .string()
+        .optional()
+        .pattern(new RegExp("^(\\+?234|0)?[789][01]\\d{8}$"))
+        .messages({
+          "string.pattern.base": "Provide a valid phone number",
+          "string.empty": validationMessages("phoneNumber").empty,
+          "any.required": validationMessages("phoneNumber").required,
+          "any.only": validationMessages("phoneNumber").only,
+          "string.base": validationMessages("phoneNumber").string,
+        }),
+    }),
+    role: joi.when("userType", {
+      is: ["adminUser", "vendorUser"],
+      then: joi
+        .string()
+        .custom(validateObjectId)
+        .optional()
+        .messages({
+          "string.empty": validationMessages("role").empty,
+          "any.required": validationMessages("role").required,
+          "any.only": validationMessages("role").only,
+          "string.base": validationMessages("role").string,
+        }),
+      otherwise: joi.forbidden().messages({
+        "any.unknown": "role is not an allowed field for this action",
       }),
+    }),
   })
   .options({ stripUnknown: true });
 
@@ -963,7 +993,7 @@ export const userListSchema = joi
 
     userType: joi
       .string()
-      .valid("vendor")
+      .valid("vendor", "vendorUser", "admin", "adminUser")
       .optional()
       .messages({
         "any.required": validationMessages("userType").required,

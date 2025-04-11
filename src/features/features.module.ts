@@ -63,6 +63,10 @@ import {
   PermissionSchema,
 } from "@/datasources/mongodb/schemas/permission.schema";
 import { Role, RoleSchema } from "@/datasources/mongodb/schemas/role.schema";
+import {
+  Organisation,
+  OrganisationSchema,
+} from "@/datasources/mongodb/schemas/organisation.schema";
 
 @Module({
   controllers: [
@@ -145,6 +149,10 @@ import { Role, RoleSchema } from "@/datasources/mongodb/schemas/role.schema";
         {
           name: Role.name,
           schema: RoleSchema,
+        },
+        {
+          name: Organisation.name,
+          schema: OrganisationSchema,
         },
       ],
       "hyperhubs",

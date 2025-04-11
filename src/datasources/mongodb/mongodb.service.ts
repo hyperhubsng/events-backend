@@ -32,6 +32,10 @@ import {
 } from "@/datasources/mongodb/schemas/permission.schema";
 
 import { Role, RoleDocument } from "@/datasources/mongodb/schemas/role.schema";
+import {
+  Organisation,
+  OrganisationDocument,
+} from "@/datasources/mongodb/schemas/organisation.schema";
 
 interface IMatch {
   $match: Record<string, any>;
@@ -320,6 +324,7 @@ export abstract class MongoDataServices {
   abstract discounts: IGenericRepository<Discount>;
   abstract permissions: IGenericRepository<Permission>;
   abstract roles: IGenericRepository<Role>;
+  abstract organisations: IGenericRepository<Organisation>;
 }
 
 @Injectable()
@@ -334,6 +339,7 @@ export class NosqlService implements MongoDataServices, OnApplicationBootstrap {
   discounts: MongoGenericRepository<Discount>;
   permissions: MongoGenericRepository<Permission>;
   roles: MongoGenericRepository<Role>;
+  organisations: MongoGenericRepository<Organisation>;
   constructor(
     @InjectModel(User.name, "hyperhubs")
     private UserRepository: Model<UserDocument>,
@@ -355,6 +361,8 @@ export class NosqlService implements MongoDataServices, OnApplicationBootstrap {
     private PermissionRepository: Model<PermissionDocument>,
     @InjectModel(Role.name, "hyperhubs")
     private RoleRepository: Model<RoleDocument>,
+    @InjectModel(Organisation.name, "hyperhubs")
+    private OrganisationRepository: Model<OrganisationDocument>,
   ) {}
 
   onApplicationBootstrap() {
@@ -378,5 +386,8 @@ export class NosqlService implements MongoDataServices, OnApplicationBootstrap {
       this.PermissionRepository,
     );
     this.roles = new MongoGenericRepository<Role>(this.RoleRepository);
+    this.organisations = new MongoGenericRepository<Organisation>(
+      this.OrganisationRepository,
+    );
   }
 }

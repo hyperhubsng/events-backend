@@ -48,7 +48,7 @@ export class User extends Document {
   password: string;
 
   @Prop({
-    enum: ["admin", "vendor"],
+    enum: ["admin", "vendor", "vendorUser", "adminUser"],
     default: "vendor",
   })
   userType: string;
@@ -60,10 +60,21 @@ export class User extends Document {
   accountStatus: string;
 
   @Prop({
+    default: false,
+  })
+  needsToChangePassword: boolean;
+
+  @Prop({
     type: Types.ObjectId,
     ref: "roles",
   })
   role: Types.ObjectId;
+
+  @Prop({ type: [Types.ObjectId], ref: "organisations" })
+  organisations: Types.ObjectId[];
+
+  @Prop({ type: Types.ObjectId, ref: "organisations" })
+  currentOrganisation: Types.ObjectId;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

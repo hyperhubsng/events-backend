@@ -1,3 +1,5 @@
+import { Types } from "mongoose";
+
 export class AddUserDTO {
   email: string;
   password: string;
@@ -6,10 +8,22 @@ export class AddUserDTO {
   phoneNumber: string;
   companyName: string;
   website: string;
+  userType: string;
+  role: Types.ObjectId;
+  accountStatus: string;
+  needsToChangePassword: boolean;
+  organisations: Types.ObjectId[];
+  currentOrganisation: Types.ObjectId;
 }
 
 export class UserQueryDTO {
   q: string;
   userType: string;
   status: string;
+  organization: string;
+}
+
+export class AddOrganisationDTO {
+  name: string;
+  owner: Types.ObjectId;
 }

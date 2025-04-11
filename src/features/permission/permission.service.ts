@@ -263,14 +263,16 @@ export class PermissionService {
   }
 
   async verifyPermission(context: ExecutionContext): Promise<boolean> {
-    const permissionName = this.reflector.get<string>(
-      "accessTitle",
+    const permissionList = this.reflector.get<string>(
+      "permissions",
       context.getHandler(),
     );
-    if (!permissionName) {
-      throw new UnauthorizedException(
-        `Unauthorized: You do not have sufficient permission to perform this action`,
-      );
+
+    if (!permissionList) {
+      // throw new UnauthorizedException(
+      //   `Unauthorized: You do not have sufficient permission to perform this action`
+      // );
+      return true;
     }
     const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const user: User = req.user as User;
@@ -290,7 +292,9 @@ export class PermissionService {
 
     if (
       !userPermissions ||
-      !userPermissions.permissions.includes(permissionName)
+      !userPermissions.permissions.some((perm: string) =>
+        permissionList.includes(perm),
+      )
     ) {
       throw new UnauthorizedException(
         `Unauthorized: User does not have the required permission`,

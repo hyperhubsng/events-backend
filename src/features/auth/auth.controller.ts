@@ -18,6 +18,8 @@ import {
 import { PUBLIC } from "./public.decorator";
 import { AddUserDTO } from "../user/user.dto";
 import { AdminGuard } from "./admin.guard";
+import { UserDecorator } from "../user/user.decorator";
+import { User } from "@/datasources/mongodb/schemas/user.schema";
 
 @Controller("auth")
 export class AuthController {
@@ -56,6 +58,17 @@ export class AuthController {
     @Body(new SignupPipe()) body: AddUserDTO,
   ) {
     const response = await this.authService.onboardOrganiser(body);
+    return this.successResponse.ok(res, req, { data: response });
+  }
+
+  @Post("/onboard-secondary-users")
+  async addOtherUsers(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Body(new SignupPipe()) body: AddUserDTO,
+    @UserDecorator() user: User,
+  ) {
+    const response = await this.authService.addOtherUsers(body, user);
     return this.successResponse.ok(res, req, { data: response });
   }
 

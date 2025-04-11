@@ -90,3 +90,18 @@ export const TICKET_PURCHASE_MESSAGE = (data: Record<string, any>) => {
   </main>
   `;
 };
+
+export const USER_ADDITION_EMAIL = (data: Record<string, any>) => {
+  return `
+  <main>
+    <h1>Invitation to Join ${data.organisationName}</h1>
+    <p>Hello ${data.firstName} ${data.lastName} , 
+    you have been invited to join ${data.organisationName}
+    </p>
+    <p> Use this link to complete your registration 
+    <a href=${data.link}>${data.link}</a>
+    </p>
+    <p> You can copy and paste the link into the browser if the clicking does not work </p>
+  </main>
+  `;
+};

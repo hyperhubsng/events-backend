@@ -8,7 +8,7 @@ import {
   JwtUnion,
 } from "@/shared/interface/interface";
 import { UserService } from "../user/user.service";
-import { getTempUserKey, responseHash } from "@/constants";
+import { USER_ADDITION_EMAIL, getTempUserKey, responseHash } from "@/constants";
 import * as bcrypt from "bcryptjs";
 import {
   AuthVerifyAccountDTO,
@@ -18,8 +18,9 @@ import {
 import { RedisService } from "@/datasources/redis/redis.service";
 import otpGenerator from "@/shared/utils/otp-generator";
 import { User } from "@/datasources/mongodb/schemas/user.schema";
-import { AddUserDTO } from "../user/user.dto";
+import { AddOrganisationDTO, AddUserDTO } from "../user/user.dto";
 import { v4 as uuid } from "uuid";
+import { AwsService } from "../aws/aws.service";
 @Injectable()
 export class AuthService {
   jwtAudience = appConfig.jwtAudience;
@@ -30,6 +31,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly userService: UserService,
     private readonly redisService: RedisService,
+    private readonly awsService: AwsService,
   ) {}
 
   async generateAuthToken(data: User): Promise<string> {
@@ -65,6 +67,8 @@ export class AuthService {
       lastName,
       profileImageUrl,
       userType,
+      currentOrganisation,
+      organisations,
     } = user;
     return {
       userId,
@@ -74,6 +78,8 @@ export class AuthService {
       token,
       profileImageUrl: profileImageUrl || "",
       userType,
+      currentOrganisation: currentOrganisation || "",
+      organisations: organisations || [],
     };
   }
 
@@ -88,6 +94,19 @@ export class AuthService {
       if (!isPasswordCorrect) {
         return Promise.reject(responseHash.invalidCredentials);
       }
+
+      if (user.needsToChangePassword) {
+        return Promise.reject({
+          ...responseHash.invalidCredentials,
+          message: "Please,reset your password first",
+        });
+      }
+      if (user.accountStatus === "locked") {
+        return Promise.reject({
+          ...responseHash.invalidCredentials,
+          message: "Your account is locked, please contact support",
+        });
+      }
       const token = await this.generateAuthToken(user);
       return await this.loginResponseTransformer(token, user);
     } catch (e) {
@@ -98,11 +117,27 @@ export class AuthService {
   async storeTemporaryRegistration(
     email: string,
     userData: AddUserDTO,
+    businessName: string = "Anon",
+    otherUser: boolean = false,
   ): Promise<ITemporaryUserResponse> {
     try {
       const reference = appConfig.isLive ? otpGenerator.generate(6) : "123456";
       this.promiseToCacheData(email, userData, reference);
-      const message = `We sent a 6 digit OTP to ${email}. Verify your account to proceed`;
+      let message = `We sent a 6 digit OTP to ${email}. Verify your account to proceed`;
+      if (otherUser) {
+        const verificationLink = `${appConfig.secondaryUsersVerificationURL}?otp=${reference}`;
+        message = `A verification email has been sent to ${email}`;
+        this.awsService.sendEmail(
+          ["dev@hyperhubs.net"],
+          "Hyperhubs Events",
+          USER_ADDITION_EMAIL({
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            organisationName: businessName,
+            link: verificationLink,
+          }),
+        );
+      }
       return {
         message,
         otpEmail: email,
@@ -166,6 +201,48 @@ export class AuthService {
       return Promise.reject(e);
     }
   }
+  private async rejectWrongUserActor(body: AddUserDTO, actor: User) {
+    const isForbidden =
+      body.userType === "vendor" ||
+      (body.userType === "vendorUser" && actor.userType !== "vendor") ||
+      (body.userType === "adminUser" && !actor.userType.includes("admin"));
+
+    if (isForbidden) return Promise.reject(responseHash.forbiddenAction);
+  }
+
+  async addOtherUsers(
+    body: AddUserDTO,
+    actor: User,
+  ): Promise<ITemporaryUserResponse> {
+    try {
+      await this.rejectWrongUserActor(body, actor);
+      const { email, phoneNumber } = body;
+      const queryArray: Record<string, string>[] = [];
+      if (email) {
+        queryArray.push({ email });
+      }
+      if (phoneNumber) {
+        queryArray.push({ phoneNumber });
+      }
+
+      await this.userService.checkUserUniqueness(queryArray, true);
+
+      body.accountStatus = "locked";
+      body.needsToChangePassword = true;
+      body.organisations = [actor.currentOrganisation];
+      body.currentOrganisation = actor.currentOrganisation;
+
+      await this.userService.addUser(body);
+      return await this.storeTemporaryRegistration(
+        email,
+        body,
+        actor.companyName,
+        true,
+      );
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
 
   async verifyOTP<T>(
     body: AuthVerifyAccountDTO,
@@ -220,11 +297,30 @@ export class AuthService {
   async createUser(body: any) {
     try {
       const user = await this.userService.addUser(body);
+      if (body.userType === "vendor") {
+        this.createOrganisation(
+          { name: body.companyName, owner: user._id },
+          user,
+        );
+      }
       const token = await this.generateAuthToken(user);
       return await this.loginResponseTransformer(
         token,
         await this.userService.getUserById(user._id),
       );
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  async createOrganisation(body: AddOrganisationDTO, user: User) {
+    try {
+      const organisation = await this.userService.createOrganisation(body);
+      const userDataToUpdate: Partial<User> = {
+        currentOrganisation: organisation._id,
+        organisations: [organisation._id],
+      };
+      await this.userService.updateUser(userDataToUpdate, user._id);
     } catch (e) {
       return Promise.reject(e);
     }

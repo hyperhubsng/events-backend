@@ -78,6 +78,8 @@ export const appConfig = {
   },
   emailSender: process.env.DEFAULT_EMAIL_SENDER as string,
   ticketConfirmationURL: process.env.TICKET_CONFIRMATION_BASE_URL as string,
+  secondaryUsersVerificationURL: process.env
+    .SECONDARY_USERS_VERIFICATION_URL as string,
 };
 
 export const mongooseConfig: any = {

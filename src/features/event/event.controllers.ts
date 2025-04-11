@@ -35,6 +35,7 @@ import {
 import { PaymentService } from "../payment/payment.service";
 import { FilesInterceptor } from "@nestjs/platform-express";
 import * as multer from "multer";
+import { PermissionsMeta } from "../permission/permission.decorator";
 
 const MAX_FILES = 5;
 
@@ -68,6 +69,7 @@ export class EventsController {
 
   @Get()
   @SetMetadata("accessTitle", "ListEvents")
+  @PermissionsMeta("ListEvents")
   async listEvents(
     @Req() req: Request,
     @Res() res: Response,

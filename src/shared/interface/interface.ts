@@ -43,6 +43,8 @@ export interface ILoginResponse {
   token: string;
   profileImageUrl: string | null;
   userType: string;
+  currentOrganisation?: Types.ObjectId;
+  organisations?: Types.ObjectId[];
 }
 
 export interface IHttpQueryParser {
