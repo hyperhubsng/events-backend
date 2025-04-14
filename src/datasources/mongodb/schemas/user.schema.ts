@@ -70,11 +70,32 @@ export class User extends Document {
   })
   role: Types.ObjectId;
 
-  @Prop({ type: [Types.ObjectId], ref: "organisations" })
+  @Prop({ type: [Types.ObjectId], ref: "users" })
   organisations: Types.ObjectId[];
 
-  @Prop({ type: Types.ObjectId, ref: "organisations" })
+  @Prop({ type: Types.ObjectId, ref: "users" })
   currentOrganisation: Types.ObjectId;
+
+  @Prop({
+    default: 0,
+  })
+  totalEvents: number;
+
+  @Prop()
+  totalOrganisations: number;
+
+  @Prop()
+  totalUsers: number;
+
+  @Prop({
+    default: 0,
+  })
+  totalRevenue: number;
+
+  @Prop({
+    default: 0,
+  })
+  totalCommissions: number;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

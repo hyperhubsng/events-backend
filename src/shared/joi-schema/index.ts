@@ -1050,3 +1050,80 @@ export const addRoleSchema = joi
       }),
   })
   .options({ stripUnknown: true });
+
+export const analyticsQuerySchema = joi
+  .object({
+    q: joi
+      .string()
+      .optional()
+      .messages({
+        "string.base": validationMessages("q").string,
+      }),
+    page: joi
+      .number()
+      .optional()
+      .messages({
+        "number.base": validationMessages("page").number,
+        "number.empty": validationMessages("page").empty,
+      }),
+
+    limit: joi.number().messages({
+      "number.base": "limit should be of type number",
+      "number.empty": "limit cannot be an empty param",
+      "any.required": validationMessages("limit").required,
+    }),
+    from: joi
+      .date()
+      .format("YYYY-MM-DD")
+      .optional()
+      .messages({
+        "any.required": validationMessages("from").required,
+        "string.pattern.base": "Provide a valid from in YYYY-MM-DD format",
+        "string.empty": validationMessages("from").empty,
+        "any.only": validationMessages("from").only,
+        "string.base": validationMessages("from").string,
+      }),
+    to: joi
+      .date()
+      .format("YYYY-MM-DD")
+      .optional()
+      .messages({
+        "any.required": validationMessages("to").required,
+        "string.pattern.base": "Provide a valid to in YYYY-MM-DD format",
+        "string.empty": validationMessages("to").empty,
+        "any.only": validationMessages("to").only,
+        "string.base": validationMessages("to").string,
+      }),
+    status: joi
+      .string()
+      .valid("active", "inactive")
+      .optional()
+      .messages({
+        "any.required": validationMessages("status").required,
+        "string.empty": validationMessages("status").empty,
+        "any.only": validationMessages("status").only,
+        "string.base": validationMessages("status").string,
+      }),
+
+    userType: joi
+      .string()
+      .valid("vendor", "vendorUser", "admin", "adminUser")
+      .optional()
+      .messages({
+        "any.required": validationMessages("userType").required,
+        "string.empty": validationMessages("userType").empty,
+        "any.only": validationMessages("userType").only,
+        "string.base": validationMessages("userType").string,
+      }),
+    presentation: joi
+      .string()
+      .valid("weekly", "monthly", "yearly")
+      .optional()
+      .messages({
+        "any.required": validationMessages("presentation").required,
+        "string.empty": validationMessages("presentation").empty,
+        "any.only": validationMessages("presentation").only,
+        "string.base": validationMessages("presentation").string,
+      }),
+  })
+  .options({ stripUnknown: true });

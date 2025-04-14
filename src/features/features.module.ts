@@ -67,6 +67,8 @@ import {
   Organisation,
   OrganisationSchema,
 } from "@/datasources/mongodb/schemas/organisation.schema";
+import { AnalyticsService } from "./analytics/analytics.service";
+import { AnalyticsController } from "./analytics/analytics.controller";
 
 @Module({
   controllers: [
@@ -77,6 +79,7 @@ import {
     AttendeeController,
     DiscountController,
     PermissionController,
+    AnalyticsController,
   ],
   providers: [
     ...redisProviders,
@@ -106,6 +109,7 @@ import {
     AttendeeService,
     DiscountService,
     PermissionService,
+    AnalyticsService,
   ],
   imports: [
     MongooseModule.forFeature(

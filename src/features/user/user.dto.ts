@@ -21,6 +21,8 @@ export class UserQueryDTO {
   userType: string;
   status: string;
   organization: string;
+  presentation: string;
+  from: string;
 }
 
 export class AddOrganisationDTO {

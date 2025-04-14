@@ -47,34 +47,14 @@ export const loginSchema = joi
   .options({ stripUnknown: true });
 
 export class AuthLoginPipe implements PipeTransform {
-  transform(value: AuthLoginDTO): AuthLoginDTO {
-    const result = loginSchema.validate(value);
-    if (result.error) {
-      const errorMessage = result.error.details
-        .map((e: Error) => e.message)
-        .join();
-      throw new BadRequestException({
-        ...responseHash.badPayload,
-        message: errorMessage,
-      });
-    }
-    return value as AuthLoginDTO;
+  transform(value: AuthLoginDTO) {
+    return pipeTransformer<AuthLoginDTO>(value, loginSchema);
   }
 }
 
 export class AuthSignupPipe implements PipeTransform {
-  transform(value: AuthSignupDTO): AuthSignupDTO {
-    const result = signupSchema.validate(value);
-    if (result.error) {
-      const errorMessage = result.error.details
-        .map((e: Error) => e.message)
-        .join();
-      throw new BadRequestException({
-        ...responseHash.badPayload,
-        message: errorMessage,
-      });
-    }
-    return value;
+  transform(value: AuthSignupDTO) {
+    return pipeTransformer<AuthSignupDTO>(value, signupSchema);
   }
 }
 
