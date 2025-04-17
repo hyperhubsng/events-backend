@@ -18,7 +18,7 @@ import { RedisService } from "@/datasources/redis/redis.service";
 export class UserService {
   constructor(
     private readonly mongoService: MongoDataServices,
-    private readonly redisService: RedisService,
+    private readonly redisService: RedisService
   ) {}
 
   async getUser(param: _FilterQuery<User>): Promise<User> {
@@ -31,7 +31,7 @@ export class UserService {
 
   async rejectUserTyype(
     userId: string | Types.ObjectId,
-    category: string,
+    category: string
   ): Promise<void> {
     try {
       const user = await this.getUser({ _id: userId });
@@ -51,7 +51,7 @@ export class UserService {
   async checkForExistingUser(queryParam: Record<string, any>[]): Promise<void> {
     const user: any = await this.mongoService.users.getOne(
       { $or: queryParam },
-      ["email"],
+      ["email"]
     );
     if (user) {
       return Promise.reject(responseHash.duplicateExists);
@@ -69,7 +69,7 @@ export class UserService {
     }
     return await this.mongoService.users.updateOneOrCreateWithOldData(
       { _id: user._id },
-      body,
+      body
     );
   }
 
@@ -119,16 +119,22 @@ export class UserService {
     try {
       if (
         !user.currentOrganisation &&
-        !["admin", "adminUser"].includes(user.userType)
+        !["admin", "adminuser", "superadmin"].includes(
+          user.userType.toLowerCase()
+        )
       ) {
         return Promise.reject(responseHash.forbiddenAction);
       }
 
       const { skip, docLimit, filters, populate } = HTTPQueryParser(req.query);
       const query: Record<string, any> = this.httpQueryFormulator(httpQuery);
-      if (!["admin", "adminUser"].includes(user.userType)) {
+      if (
+        !["admin", "adminuser", "superadmin"].includes(
+          user.userType.toLowerCase()
+        )
+      ) {
         query.currentOrganisation = new Types.ObjectId(
-          user.currentOrganisation,
+          user.currentOrganisation
         );
       }
       filters.push("-password");
@@ -139,7 +145,7 @@ export class UserService {
         populate,
         docLimit,
         skip,
-        "createdAt",
+        "createdAt"
       );
 
       const userCount = await this.mongoService.users.count(query);
@@ -152,7 +158,7 @@ export class UserService {
       }
       if (!["admin", "adminUser"].includes(user.userType)) {
         statsQuery.currentOrganisation = new Types.ObjectId(
-          user.currentOrganisation,
+          user.currentOrganisation
         );
       }
       const [activeUsers, inactiveUsers] = await Promise.all([
@@ -200,7 +206,7 @@ export class UserService {
 
   async checkUserUniqueness(
     fieldsToCheck: Record<string, any>[],
-    hasEmail: true,
+    hasEmail: true
   ): Promise<void> {
     try {
       //Check to Ensure Email is Unique

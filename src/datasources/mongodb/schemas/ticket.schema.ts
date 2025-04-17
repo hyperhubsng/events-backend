@@ -69,6 +69,11 @@ export class Ticket extends Document {
 
   @Prop()
   totalAmountReceived: number;
+
+  @Prop({
+    default: false,
+  })
+  softDelete: boolean;
 }
 
 export type TicketDocument = HydratedDocument<Ticket>;
@@ -81,7 +86,11 @@ TicketSchema.pre("findOneAndUpdate", async function (next) {
     const existingDoc = await this.model.findOne(filter).lean();
     if (update && typeof update === "object" && !Array.isArray(update)) {
       const updateQuery = update as Record<string, any>;
-      if (updateQuery.$inc.quantityAvailable) {
+      if (
+        updateQuery.hasOwnProperty("$inc") &&
+        updateQuery.$inc.hasOwnProperty("quantityAvailable") &&
+        updateQuery.$inc.quantityAvailable
+      ) {
         const newQuantityAvailable =
           existingDoc.quantityAvailable + updateQuery.$inc.quantityAvailable;
         if (newQuantityAvailable === 0) {

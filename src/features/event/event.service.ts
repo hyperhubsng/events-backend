@@ -2,6 +2,7 @@ import { MongoDataServices } from "@/datasources/mongodb/mongodb.service";
 import { User } from "@/datasources/mongodb/schemas/user.schema";
 import {
   IPagination,
+  ITicket,
   ITransactionData,
   numStrObj,
 } from "@/shared/interface/interface";
@@ -34,12 +35,37 @@ export class EventService {
     private readonly userService: UserService,
     private readonly paymentService: PaymentService,
     private readonly s3Service: S3Service,
-    private readonly redisService: RedisService,
+    private readonly redisService: RedisService
   ) {}
+  private slugifyEventTitle(title: string) {
+    return title
+      .toLowerCase()
+      .trim()
+      .replace(/[\s_]+/g, "-")
+      .replace(/[^\w\-]+/g, "")
+      .replace(/\-\-+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+  private async isSlugExists(slug: string) {
+    return await this.mongoService.events.getOneWithAllFields({ slug });
+  }
+
+  async generateUniqueSlug(title: string) {
+    const baseSlug = this.slugifyEventTitle(title);
+    let slug = baseSlug;
+    let count = 1;
+
+    while (await this.isSlugExists(slug)) {
+      slug = `${baseSlug}-${count}`;
+      count++;
+    }
+
+    return slug;
+  }
   async addEvent(
     files: Array<Express.Multer.File>,
     data: AddEventDTO,
-    user: User,
+    user: User
   ) {
     try {
       const { ownerId, coordinates } = data;
@@ -49,22 +75,111 @@ export class EventService {
           message: "Select an organisation to create for",
         });
       }
+
+      const slug = await this.generateUniqueSlug(data.title);
+
       await this.userService.rejectUserTyype(ownerId, "admin");
       const filePromises = files.map((file) =>
-        this.s3Service.putObject(`${uuid()}-${file.originalname}`, file.buffer),
+        this.s3Service.putObject(`${uuid()}-${file.originalname}`, file.buffer)
       );
       const fileUrls = await Promise.all(filePromises);
       data.createdBy = user._id;
       data.ownerId = new Types.ObjectId(ownerId);
       data.images = fileUrls;
+      data.slug = slug;
+
       if (coordinates) {
         data.location = {
           coordinates,
         };
       }
-      return await this.mongoService.events.create(
-        data as unknown as Partial<Event>,
+      if (data.tickets) {
+        data.status = "upcoming";
+      }
+      const event = await this.mongoService.events.create(
+        data as unknown as Partial<Event>
       );
+      if (data.tickets) {
+        const ticketList: ITicket[] = [];
+        for (const ticket of data.tickets) {
+          ticketList.push({
+            ...ticket,
+            eventId: event._id,
+            ownerId: event.ownerId,
+          });
+        }
+        await this.mongoService.tickets.createMany(ticketList);
+      }
+      return await this.getOneEvent({ _id: event._id });
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  async editEvent(
+    files: Array<Express.Multer.File>,
+    id: string,
+    data: AddEventDTO,
+    user: User
+  ) {
+    try {
+      const { ownerId, coordinates } = data;
+      const eventId = new Types.ObjectId(id);
+      let eventQuery: Record<string, any> = {
+        _id: eventId,
+      };
+      if (!["admin", "superadmin", "adminUser"].includes(user.userType)) {
+        eventQuery.ownerId = user._id;
+      }
+      const event = await this.getOneEvent(eventQuery);
+      if (user.userType === "admin" && !ownerId) {
+        return Promise.reject({
+          ...responseHash.badPayload,
+          message: "Select an organisation to create for",
+        });
+      }
+
+      if (files.length > 0) {
+        const filePromises = files.map((file) =>
+          this.s3Service.putObject(
+            `${uuid()}-${file.originalname}`,
+            file.buffer
+          )
+        );
+        const fileUrls = await Promise.all(filePromises);
+        data.images = event.images.concat(...fileUrls);
+      }
+
+      if (coordinates) {
+        data.location = {
+          coordinates,
+        };
+      }
+
+      if (data.tickets) {
+        const newticketList: ITicket[] = [];
+        for (const ticket of data.tickets) {
+          if (ticket.ticketId) {
+            const isTicket = await this.getTicket({ _id: ticket.ticketId });
+            await this.mongoService.tickets.updateOne(
+              { _id: isTicket._id },
+              ticket
+            );
+            continue;
+          }
+          newticketList.push({
+            ...ticket,
+            eventId: event._id,
+            ownerId: event.ownerId,
+          });
+        }
+        await this.mongoService.tickets.createMany(newticketList);
+      }
+      await this.mongoService.events.updateOneOrCreateWithOldData(
+        eventQuery,
+        data
+      );
+      return await this.getOneEvent({ _id: event._id });
     } catch (err) {
       return Promise.reject(err);
     }
@@ -72,7 +187,7 @@ export class EventService {
 
   httpQueryFormulator(
     httpQuery: HttpQueryDTO,
-    user?: User,
+    user?: User
   ): Record<string, numStrObj> {
     let query: Record<string, numStrObj> = {};
     if (httpQuery.q) {
@@ -333,12 +448,13 @@ export class EventService {
       data.eventId = event._id;
       data.ownerId = event.ownerId;
       const ticket = await this.mongoService.tickets.create(data);
+
       if (eventTickets) {
         await this.redisService.remove(eventTicketsKey);
         if (event.status !== "upcoming") {
           await this.mongoService.events.updateOne(
             { _id: eventId },
-            { status: "upcoming" },
+            { status: "upcoming" }
           );
         }
       }
@@ -367,7 +483,7 @@ export class EventService {
           $lookup: {
             from: "attendees",
             let: {
-              ticketId: "$ticketId",
+              ticketId: "$_id",
             },
             pipeline: [
               {
@@ -382,6 +498,38 @@ export class EventService {
           },
         },
         {
+          $lookup: {
+            from: "discounts",
+            let: {
+              ticketId: "$_id",
+            },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$ticketId", "$$ticketId"],
+                  },
+                },
+              },
+              {
+                $project: {
+                  discounType: 1,
+                  status: 1,
+                  value: 1,
+                  hasUsageLimit: 1,
+                  usageLimit: 1,
+                  hasMaxCap: 1,
+                  maxCap: 1,
+                },
+              },
+            ],
+            as: "discount",
+          },
+        },
+        {
+          $unwind: "$discount",
+        },
+        {
           $project: {
             attendees: 1,
             ticketId: "$_id",
@@ -390,6 +538,7 @@ export class EventService {
             title: 1,
             isAvailable: 1,
             hasDiscount: 1,
+            discount: 1,
             discountValue: {
               $cond: [
                 {
@@ -461,16 +610,15 @@ export class EventService {
       });
 
       const eventTicketsKey = `events:${eventId}:tickets`;
-      const cachedEvent = await this.redisService.get(eventTicketsKey);
-      if (cachedEvent) {
-        return JSON.parse(cachedEvent);
-      }
-
+      // const cachedEvent = await this.redisService.get(eventTicketsKey);
+      // if (cachedEvent) {
+      //   return JSON.parse(cachedEvent);
+      // }
       const queryResult = await this.aggregateTickets(query, skip, docLimit);
       await this.redisService.setEx(
         eventTicketsKey,
         JSON.stringify(queryResult),
-        60 * 60 * 24,
+        60 * 60 * 24
       );
       return queryResult;
     } catch (e) {
@@ -480,11 +628,31 @@ export class EventService {
 
   async buyTicket(eventId: string, body: PurchaseTicketDTO) {
     try {
-      const { tickets, charges } = body;
+      //Check That the Event exists
+      //Validate that the event is still active
+      // Process the Charge Fee
+      // Check if the discount exists
+      // Process the amount per ticket and remove the necessary discount
+      // Generate the payment payload
+      // Get the payment link
+
+      //Discount checking or applying should have a dedicated route
+      // When payment is made enter the discount value , the value paid
+      // Let the attendance carry the discount info
+      // Let the payment carry the discount info
+      // Let the discount attributes be updated
+
+      const { tickets, charges, discountCode } = body;
       const query: Record<string, any> = {
         _id: new Types.ObjectId(eventId),
       };
       const event = await this.getOneEvent(query);
+      if (event.softDelete) {
+        return Promise.reject({
+          ...responseHash.notFound,
+          message: "This event is not available",
+        });
+      }
       const currentTime = Date.now();
       if (currentTime > new Date(event.startDate).getTime()) {
         return Promise.reject({
@@ -492,14 +660,29 @@ export class EventService {
           message: `Event currently not in sale`,
         });
       }
+
       const totalCharges: number = charges
         ? charges.reduce((a, b) => a + b.amount, 0)
         : 0;
+
+      const discount = await this.mongoService.discounts.getOneWithAllFields({
+        code: discountCode,
+        eventId: new Types.ObjectId(eventId),
+        status: true,
+      });
+
+      if (discountCode && !discount) {
+        return Promise.reject({
+          ...responseHash.notFound,
+          message: `Discount code ${discountCode} is invalid`,
+        });
+      }
 
       let totalAmount = 0;
       for (const ticket of tickets) {
         const t = await this.getTicket({
           _id: new Types.ObjectId(ticket.ticketId),
+          eventId: new Types.ObjectId(eventId),
         });
         //Confirm that the ticket exists
         if (!t) {
@@ -534,6 +717,31 @@ export class EventService {
         ticket.eventId = t.eventId;
         ticket.ownerId = t.ownerId;
         totalAmount += ticket.amount;
+
+        if (discount && String(t._id) === String(discount.ticketId)) {
+          const currentTime = Date.now();
+          const startTime = new Date(discount.startDate).getTime();
+          const endTime = new Date(discount.endDate).getTime();
+
+          if (
+            discount.startDate &&
+            discount.endDate &&
+            (currentTime < startTime || currentTime > endTime)
+          ) {
+            return Promise.reject({
+              ...responseHash.badPayload,
+              message: `Discount is not currently active`,
+            });
+          }
+          let discountRate =
+            discount.discountType === "percent"
+              ? (discount.value * ticket.amount) / 100
+              : discount.value;
+          if (discount.hasMaxCap && discountRate > discount.maxCap) {
+            discountRate = discount.maxCap;
+          }
+          totalAmount -= discountRate;
+        }
       }
 
       totalAmount += totalCharges;
@@ -697,7 +905,7 @@ export class EventService {
   async aggregateEventSales(
     query: any,
     skip: number = 0,
-    limit: number = 1000,
+    limit: number = 1000
   ) {
     try {
       const result = await this.mongoService.attendees.aggregateRecords([
@@ -757,6 +965,149 @@ export class EventService {
         },
       ]);
       return result;
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  async removeEvent(id: string, user: User) {
+    try {
+      const eventId = new Types.ObjectId(id);
+      let eventQuery: Record<string, any> = {
+        _id: eventId,
+      };
+
+      if (!["admin", "superadmin", "adminUser"].includes(user.userType)) {
+        eventQuery.ownerId = user._id;
+      }
+      const event = await this.getOneEvent(eventQuery);
+      if (event.softDelete) {
+        return Promise.reject({
+          ...responseHash.forbiddenAction,
+          message: "Event already deleted",
+        });
+      }
+      //Check if someone has paid for this event
+      const doesEventHaveAttendee =
+        await this.mongoService.attendees.getOneWithAllFields({
+          eventId: eventId,
+        });
+      if (doesEventHaveAttendee) {
+        //Do Soft Delete
+        await this.mongoService.events.updateOne(eventQuery, {
+          $set: {
+            softDelete: true,
+          },
+        });
+        return {};
+      }
+      //When an Event is Deleted, remove the assets for that event
+      await Promise.all([
+        this.mongoService.tickets.deleteMany({ eventId }),
+        this.mongoService.events.deleteOne(eventQuery),
+      ]);
+      return {};
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  async removeTicket(id: string, user: User) {
+    try {
+      const ticketId = new Types.ObjectId(id);
+      let ticketQuery: Record<string, any> = {
+        _id: ticketId,
+      };
+
+      if (!["admin", "superadmin", "adminUser"].includes(user.userType)) {
+        ticketQuery.ownerId = user._id;
+      }
+      const ticket = await this.getTicket(ticketQuery);
+      if (ticket.softDelete) {
+        return Promise.reject({
+          ...responseHash.forbiddenAction,
+          message: "Ticket already deleted",
+        });
+      }
+      //Check if someone has paid for this event
+      const doesTicketHaveAttendee =
+        await this.mongoService.attendees.getOneWithAllFields({
+          ticketId: ticket._id,
+        });
+      if (doesTicketHaveAttendee) {
+        //Do Soft Delete
+        await this.mongoService.tickets.updateOne(ticketQuery, {
+          $set: {
+            softDelete: true,
+          },
+        });
+        return {};
+      }
+
+      await this.mongoService.tickets.deleteOne(ticketQuery);
+      return {};
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  async updateTicket(id: string, data: CreateTicketDTO, user: User) {
+    try {
+      const ticketId = new Types.ObjectId(id);
+      let ticketQuery: Record<string, any> = {
+        _id: ticketId,
+      };
+
+      if (!["admin", "superadmin", "adminUser"].includes(user.userType)) {
+        ticketQuery.ownerId = user._id;
+      }
+      const ticket = await this.getTicket(ticketQuery);
+      if (ticket.softDelete) {
+        return Promise.reject({
+          ...responseHash.forbiddenAction,
+          message: "Ticket already deleted",
+        });
+      }
+      if (data.quantity && data.quantity < ticket.quantity) {
+        return Promise.reject({
+          ...responseHash.badPayload,
+          message: "New quantity cannot be lesser than orinal quantity",
+        });
+      }
+      if (data.quantity) {
+        const difference = data.quantity - ticket.quantity;
+        data.quantityAvailable = ticket.quantityAvailable + difference;
+      }
+      return await this.mongoService.tickets.updateOneOrCreate(
+        ticketQuery,
+        data
+      );
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  async removeEventImage(id: string, data: any, user: User) {
+    try {
+      if (!data.images) {
+        return Promise.reject({
+          ...responseHash.badPayload,
+          message: "The images to remove are needed",
+        });
+      }
+      const ticketId = new Types.ObjectId(id);
+      let ticketQuery: Record<string, any> = {
+        _id: ticketId,
+      };
+
+      if (!["admin", "superadmin", "adminUser"].includes(user.userType)) {
+        ticketQuery.ownerId = user._id;
+      }
+
+      // return await this.mongoService.tickets.updateOneOrCreate(
+      //   ticketQuery,
+      //   data
+      // );
     } catch (err) {
       return Promise.reject(err);
     }

@@ -13,7 +13,9 @@ export class Discount extends Document {
   @Prop()
   ticketId: Types.ObjectId;
 
-  @Prop()
+  @Prop({
+    unique: true,
+  })
   code: string;
 
   @Prop({
@@ -35,7 +37,7 @@ export class Discount extends Document {
   hasExpiration: boolean;
 
   @Prop()
-  expirationDate: Date;
+  endDate: Date;
 
   @Prop()
   startDate: Date;
@@ -68,6 +70,9 @@ export class Discount extends Document {
     default: true,
   })
   status: boolean;
+
+  @Prop()
+  maxCap: number;
 }
 
 export type DiscountDocument = HydratedDocument<Discount>;

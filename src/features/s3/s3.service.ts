@@ -1,4 +1,10 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  PutObjectCommand,
+  ListObjectsCommand,
+  ListObjectsCommandOutput,
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
 import { s3Client, appConfig } from "@/config";
 import { Injectable } from "@nestjs/common";
 import { ErrorService } from "@/shared/errors/errors.service";
@@ -30,6 +36,43 @@ export class S3Service {
       return `https://${this.awsBucket}.s3.${this.awsRegion}.amazonaws.com/${fileName}`;
     } catch (e) {
       return this.errorService.serviceError(e);
+    }
+  }
+
+  async getObjects(): Promise<ListObjectsCommandOutput> {
+    try {
+      const bucketParams = {
+        Bucket: this.awsBucket,
+      };
+      return await s3Client.send(new ListObjectsCommand(bucketParams));
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  async getFile(url: string) {
+    try {
+      const params = {
+        Bucket: this.awsBucket,
+        Key: url,
+      };
+      const data = await s3Client.send(new GetObjectCommand(params));
+      return data.Body;
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  async deleteObject(key: string) {
+    const params = {
+      Bucket: this.awsBucket,
+      Key: key,
+    };
+
+    try {
+      return await s3Client.send(new DeleteObjectCommand(params));
+    } catch (err) {
+      return Promise.reject(err);
     }
   }
 }

@@ -16,6 +16,8 @@ import {
   createTicketSchema,
   eventListSchema,
   purchaseTicketSchema,
+  updateEventSchema,
+  updateTicketSchema,
 } from "@/shared/joi-schema";
 import { responseHash } from "@/constants";
 
@@ -54,5 +56,17 @@ export class CreateTicketPipe implements PipeTransform {
 export class PurchaseTicketPipe implements PipeTransform {
   transform(value: PurchaseTicketDTO) {
     return pipeTransformer<PurchaseTicketDTO>(value, purchaseTicketSchema);
+  }
+}
+
+export class UpdateEventPipe implements PipeTransform {
+  transform(value: AddEventDTO) {
+    return pipeTransformer<AddEventDTO>(value, updateEventSchema);
+  }
+}
+
+export class UpdateTicketPipe implements PipeTransform {
+  transform(value: CreateTicketDTO) {
+    return pipeTransformer<CreateTicketDTO>(value, updateTicketSchema);
   }
 }

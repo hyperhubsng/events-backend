@@ -84,6 +84,16 @@ export class Event extends Document {
     default: false,
   })
   hasExtraCharges: boolean;
+
+  @Prop({
+    default: false,
+  })
+  softDelete: boolean;
+
+  @Prop({
+    unique: true,
+  })
+  slug: string;
 }
 
 export type EventDocument = HydratedDocument<Event>;
