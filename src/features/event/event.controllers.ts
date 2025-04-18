@@ -216,7 +216,7 @@ export class EventsController {
     @UserDecorator() user: User,
     @Body(new RemoveEventImagesPipe()) body: RemoveEventImagesDTO
   ) {
-    const data = await this.eventService.removeEventImage(eventId, body, user);
+    const data = await this.eventService.removeEventImages(eventId, body, user);
     await this.successResponse.ok(res, req, { data });
   }
 

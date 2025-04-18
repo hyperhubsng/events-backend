@@ -58,6 +58,8 @@ export class PurchaseTicketDTO {
   callbackUrl: string;
   paymentProcessor: string;
   discountCode: string;
+  hasDiscount: boolean;
+  discountAmount: number;
 }
 
 export class RemoveEventImagesDTO {

@@ -73,6 +73,11 @@ export class Discount extends Document {
 
   @Prop()
   maxCap: number;
+
+  @Prop({
+    default: false,
+  })
+  softDelete: boolean;
 }
 
 export type DiscountDocument = HydratedDocument<Discount>;
@@ -85,6 +90,32 @@ DiscountSchema.pre("save", async function (next) {
     this.quantityRemaining = quantity - quantityUsed;
     return next();
   } catch (error: any) {
+    return next(error);
+  }
+});
+
+DiscountSchema.pre("findOneAndUpdate", async function (next) {
+  try {
+    const update = this.getUpdate();
+    const filter = this.getQuery();
+    const existingDoc = await this.model.findOne(filter).lean();
+    if (update && typeof update === "object" && !Array.isArray(update)) {
+      const updateQuery = update as Record<string, any>;
+      if (updateQuery.hasOwnProperty("$inc")) {
+        const newQuantityAvailable =
+          existingDoc.quantity -
+          existingDoc.quantityUsed -
+          updateQuery.$inc.quantityUsed;
+        updateQuery.$set.quantityRemaining = newQuantityAvailable;
+        if (newQuantityAvailable === 0) {
+          updateQuery.$set.status = false;
+        }
+        this.setUpdate(updateQuery);
+      }
+    }
+    return next();
+  } catch (error: any) {
+    console.log("see error", error);
     return next(error);
   }
 });

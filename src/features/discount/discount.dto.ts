@@ -12,7 +12,9 @@ export class DiscountDTO {
   usageLimit: number;
   discountType: string;
   value: number;
-  quanity: number;
+  quantity: number;
   startDate: Date;
   endDate: Date;
+  quantityUsed: number;
+  quantityRemaining: number;
 }

@@ -44,7 +44,11 @@ export class DiscountService {
     }
   }
 
-  async aggregateDiscount(query: any, skip: number = 0, limit: number = 1000) {
+  async aggregateDiscount(
+    query: any,
+    skip: number = 0,
+    limit: number = 1000
+  ): Promise<Discount[]> {
     try {
       const result = await this.mongoService.discounts.aggregateRecords([
         {
@@ -101,7 +105,7 @@ export class DiscountService {
 
   async addDiscount(data: DiscountDTO, user: User) {
     try {
-      const { targets, ownerId, discountType, value } = data;
+      const { targets, ownerId, discountType, value, quantity } = data;
       if (user.userType === "admin" && !ownerId) {
         return Promise.reject({
           ...responseHash.badPayload,
@@ -169,6 +173,12 @@ export class DiscountService {
           ...data,
           ownerId: userId,
           targets,
+          ...(quantity && {
+            quantity,
+          }),
+          ...(quantity && {
+            quantityRemaining: quantity,
+          }),
         });
       }
       const discounts = await this.mongoService.discounts.createMany(
@@ -230,7 +240,26 @@ export class DiscountService {
       if (user?.userType === "vendor") {
         query.ownerId = user._id;
       }
-      await this.getDiscountWithAnyParam(query);
+      const discount = await this.getDiscountWithAnyParam(query);
+      const hasDiscountBeenUsed =
+        await this.mongoService.attendees.getOneWithAllFields({
+          discountCode: discount.code,
+        });
+
+      if (hasDiscountBeenUsed) {
+        await this.mongoService.discounts.updateOneOrCreate(
+          {
+            _id: discount._id,
+          },
+          {
+            $set: {
+              status: false,
+              softDelete: true,
+            },
+          }
+        );
+        return "Discount Soft Deleted Successfully";
+      }
       await this.mongoService.discounts.deleteOne(query);
       return "Discount Deleted Successfully";
     } catch (err) {

@@ -28,6 +28,7 @@ import { v4 as uuid } from "uuid";
 import { verifyObjectId } from "@/shared/utils/verify-object-id";
 import { S3Service } from "../s3/s3.service";
 import { RedisService } from "@/datasources/redis/redis.service";
+import { Discount } from "@/datasources/mongodb/schemas/discount.schema";
 
 @Injectable()
 export class EventService {
@@ -627,6 +628,206 @@ export class EventService {
     }
   }
 
+  async isEventStillActive(event: Event) {
+    try {
+      const currentTime = Date.now();
+      if (currentTime > new Date(event.startDate).getTime()) {
+        return Promise.reject({
+          ...responseHash.notFound,
+          message: `Event currently not in sale`,
+        });
+      }
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+  async blockActionOnDeletedEvent(event: Event) {
+    try {
+      if (event.softDelete) {
+        return Promise.reject({
+          ...responseHash.notFound,
+          message: "This event is not available",
+        });
+      }
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  async getEventDiscount(event: Event, discountCode: string) {
+    try {
+      const discount = await this.mongoService.discounts.getOneWithAllFields({
+        code: discountCode,
+        eventId: event._id,
+        status: true,
+      });
+
+      if (discountCode && !discount) {
+        return Promise.reject({
+          ...responseHash.notFound,
+          message: `Discount code ${discountCode} is invalid`,
+        });
+      }
+      return discount;
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+  async enforceTicketSellingConditions(isTicket: Ticket, ticket: ITicket) {
+    try {
+      if (!isTicket) {
+        return Promise.reject({
+          ...responseHash.notFound,
+          message: `Tickets you selected were not found`,
+        });
+      }
+      const { quantityAvailable, orderLimit, isAvailable, title } = isTicket;
+      if (quantityAvailable === 0) {
+        return Promise.reject({
+          ...responseHash.notFound,
+          message: "Sold out",
+        });
+      }
+      if (!isAvailable) {
+        return Promise.reject({
+          ...responseHash.badPayload,
+          message: `${title} is already sold out`,
+        });
+      }
+      //Confirm that the ticket is still available
+      if (ticket.quantity > orderLimit) {
+        const availableUnits = quantityAvailable || 0;
+        return Promise.reject({
+          ...responseHash.badPayload,
+          message: `You can only purchase ${orderLimit} tickets of ${title}. ${availableUnits} tickets still available  `,
+        });
+      }
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  async applyDiscount(
+    ticket: ITicket,
+    discount: Discount,
+    ticketQuantity: number,
+    ticketPrice: number
+  ) {
+    try {
+      let discountAmount = 0;
+      let quantity = ticketQuantity;
+      if (discount && String(ticket.ticketId) === String(discount.ticketId)) {
+        const currentTime = Date.now();
+        const startTime = new Date(discount.startDate).getTime();
+        const endTime = new Date(discount.endDate).getTime();
+
+        if (discount.hasUsageLimit && ticketQuantity > discount.usageLimit) {
+          quantity = discount.usageLimit;
+        }
+        if (
+          discount.startDate &&
+          discount.endDate &&
+          (currentTime < startTime || currentTime > endTime)
+        ) {
+          return Promise.reject({
+            ...responseHash.badPayload,
+            message: `Discount is not currently active`,
+          });
+        }
+        switch (discount.discountType) {
+          case "percent":
+            discountAmount = (discount.value * ticketPrice * quantity) / 100;
+            break;
+          default:
+            discountAmount = discount.value * quantity;
+        }
+
+        if (discount.hasMaxCap && discountAmount > discount.maxCap) {
+          discountAmount = discount.maxCap;
+        }
+      }
+      return discountAmount;
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+  async computeTicketAmount(
+    eventId: Types.ObjectId,
+    tickets: ITicket[],
+    discount: Discount
+  ): Promise<{
+    totalAmount: number;
+    computedTickets: ITicket[];
+    totalDiscount: number;
+  }> {
+    try {
+      let totalAmount = 0;
+      let totalDiscount = 0;
+      for (const ticket of tickets) {
+        const isTicket = await this.getTicket({
+          _id: new Types.ObjectId(ticket.ticketId),
+          eventId,
+        });
+
+        await this.enforceTicketSellingConditions(isTicket, ticket);
+        ticket.amount = ticket.quantity * isTicket.price;
+        ticket.title = isTicket.title;
+        ticket.eventId = isTicket.eventId;
+        ticket.ownerId = isTicket.ownerId;
+        totalAmount += ticket.amount;
+        const discountAmount = await this.applyDiscount(
+          ticket,
+          discount,
+          ticket.quantity,
+          isTicket.price
+        );
+
+        totalDiscount += discountAmount;
+        totalAmount = totalAmount + ticket.amount - discountAmount;
+      }
+      return {
+        totalAmount,
+        computedTickets: tickets,
+        totalDiscount,
+      };
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+  prepareTicketPurchaseData(
+    body: PurchaseTicketDTO,
+    computedTickets: ITicket[],
+    event: Event,
+    totalAmount: number
+  ) {
+    try {
+      const eventTitle = event.title;
+      const eventId = event._id;
+      const processor = body.paymentProcessor || PAYMENT_PROCESSORS.flutterWave;
+      body.tickets = computedTickets;
+      const paymentData: ITransactionData = {
+        paymentReference: uuid(),
+        currency: "NGN",
+        processor,
+        narration: `Payment for Event ${eventTitle} `,
+        user: body.email,
+        amount: totalAmount,
+        paymentMethod: "web",
+        status: "pending",
+        transactionDate: new Date(),
+        transactionType: "debit",
+        userIdentifier: body.email,
+        productId: new Types.ObjectId(eventId),
+        productTitle: "events",
+        originalAmount: totalAmount,
+        beneficiaryId: event.ownerId,
+        ...body,
+      };
+      return paymentData;
+    } catch (e) {
+      throw new Error(e);
+    }
+  }
   async buyTicket(eventId: string, body: PurchaseTicketDTO) {
     try {
       //Check That the Event exists
@@ -648,129 +849,36 @@ export class EventService {
         _id: new Types.ObjectId(eventId),
       };
       const event = await this.getOneEvent(query);
-      if (event.softDelete) {
-        return Promise.reject({
-          ...responseHash.notFound,
-          message: "This event is not available",
-        });
-      }
-      const currentTime = Date.now();
-      if (currentTime > new Date(event.startDate).getTime()) {
-        return Promise.reject({
-          ...responseHash.notFound,
-          message: `Event currently not in sale`,
-        });
-      }
+
+      await Promise.all([
+        this.isEventStillActive(event),
+        this.blockActionOnDeletedEvent(event),
+      ]);
 
       const totalCharges: number = charges
         ? charges.reduce((a, b) => a + b.amount, 0)
         : 0;
-
-      const discount = await this.mongoService.discounts.getOneWithAllFields({
-        code: discountCode,
-        eventId: new Types.ObjectId(eventId),
-        status: true,
-      });
-
-      if (discountCode && !discount) {
-        return Promise.reject({
-          ...responseHash.notFound,
-          message: `Discount code ${discountCode} is invalid`,
-        });
-      }
-
-      let totalAmount = 0;
-      for (const ticket of tickets) {
-        const t = await this.getTicket({
-          _id: new Types.ObjectId(ticket.ticketId),
-          eventId: new Types.ObjectId(eventId),
-        });
-        //Confirm that the ticket exists
-        if (!t) {
-          return Promise.reject({
-            ...responseHash.notFound,
-            message: `Tickets you selected were not found`,
-          });
-        }
-        if (t.quantityAvailable === 0) {
-          return Promise.reject({
-            ...responseHash.notFound,
-            message: "Sold out",
-          });
-        }
-        if (!t.isAvailable) {
-          return Promise.reject({
-            ...responseHash.badPayload,
-            message: `${t.title} is already sold out`,
-          });
-        }
-        //Confirm that the ticket is still available
-        if (ticket.quantity > t.orderLimit) {
-          const quantityAvailable = t.quantityAvailable || 0;
-          return Promise.reject({
-            ...responseHash.badPayload,
-            message: `You can only purchase ${t.orderLimit} tickets of ${t.title}. ${quantityAvailable} tickets still available  `,
-          });
-        }
-
-        ticket.amount = ticket.quantity * t.price;
-        ticket.title = t.title;
-        ticket.eventId = t.eventId;
-        ticket.ownerId = t.ownerId;
-        totalAmount += ticket.amount;
-
-        if (discount && String(t._id) === String(discount.ticketId)) {
-          const currentTime = Date.now();
-          const startTime = new Date(discount.startDate).getTime();
-          const endTime = new Date(discount.endDate).getTime();
-
-          if (
-            discount.startDate &&
-            discount.endDate &&
-            (currentTime < startTime || currentTime > endTime)
-          ) {
-            return Promise.reject({
-              ...responseHash.badPayload,
-              message: `Discount is not currently active`,
-            });
-          }
-          let discountRate =
-            discount.discountType === "percent"
-              ? (discount.value * ticket.amount) / 100
-              : discount.value;
-          if (discount.hasMaxCap && discountRate > discount.maxCap) {
-            discountRate = discount.maxCap;
-          }
-          totalAmount -= discountRate;
-        }
-      }
-
+      const discount = await this.getEventDiscount(event, discountCode);
+      let { totalAmount, computedTickets, totalDiscount } =
+        await this.computeTicketAmount(event._id, tickets, discount);
       totalAmount += totalCharges;
-      const processor = body.paymentProcessor || PAYMENT_PROCESSORS.flutterWave;
-      const paymentData: ITransactionData = {
-        paymentReference: uuid(),
-        currency: "NGN",
-        processor,
-        narration: `Payment for Event ${event.title} `,
-        user: body.email,
-        amount: totalAmount,
-        paymentMethod: "web",
-        status: "pending",
-        transactionDate: new Date(),
-        transactionType: "debit",
-        userIdentifier: body.email,
-        productId: new Types.ObjectId(eventId),
-        productTitle: "events",
-        originalAmount: totalAmount,
-        beneficiaryId: event.ownerId,
-        ...body,
-      };
-      //Make Payment
+      body.discountAmount = totalDiscount;
+      body.discountCode = discountCode;
+      body.hasDiscount = discountCode ? true : false;
+      const paymentData = this.prepareTicketPurchaseData(
+        body,
+        computedTickets,
+        event,
+        totalAmount
+      );
       const getPaymentLink = await this.paymentService.makePayment(paymentData);
-      //The end goal of this process is to return a payment link
       return {
         hasPaymentLink: true,
         paymentLink: getPaymentLink,
+        amount: totalAmount + totalDiscount,
+        charges: totalCharges,
+        discountAmount: totalDiscount,
+        amountToPay: totalAmount,
       };
     } catch (err) {
       if (err instanceof AxiosError) {
@@ -1088,14 +1196,18 @@ export class EventService {
     }
   }
 
-  async removeEventImage(id: string, data: RemoveEventImagesDTO, user: User) {
+  async removeEventImages(
+    id: string,
+    data: RemoveEventImagesDTO,
+    user: User
+  ): Promise<string[]> {
     try {
       const { query, event } = await this.getEventForOwner(id, user);
       const { imagesToKeep, imagesToRemove } = this.prepareImagesForProcessing(
         event,
         data.images
       );
-      Promise.all([
+      await Promise.all([
         this.mongoService.events.updateOneOrCreate(query, {
           $set: {
             images: imagesToKeep,
