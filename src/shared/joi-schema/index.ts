@@ -1523,3 +1523,15 @@ export const updateTicketSchema = joi
       }),
   })
   .options({ stripUnknown: true });
+
+export const removeEventImageSchema = joi
+  .object({
+    images: joi
+      .array()
+      .items(joi.string().required())
+      .messages({
+        "string.empty": validationMessages("images").empty,
+        "any.only": validationMessages("images").only,
+      }),
+  })
+  .options({ stripUnknown: true });

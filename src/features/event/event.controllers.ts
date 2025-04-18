@@ -27,12 +27,14 @@ import {
   CreateTicketDTO,
   HttpQueryDTO,
   PurchaseTicketDTO,
+  RemoveEventImagesDTO,
 } from "./event.dto";
 import {
   AddEventPipe,
   CreateTicketPipe,
   EventQueryPipe,
   PurchaseTicketPipe,
+  RemoveEventImagesPipe,
   UpdateEventPipe,
   UpdateTicketPipe,
 } from "./event.pipe";
@@ -204,6 +206,18 @@ export class EventsController {
       req
     );
     await this.successResponse.ok(res, req, { data, pagination: extraData });
+  }
+
+  @Delete("/events/:eventId/images")
+  async removeEventImage(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Param("eventId", new ObjectIdValidationPipe()) eventId: string,
+    @UserDecorator() user: User,
+    @Body(new RemoveEventImagesPipe()) body: RemoveEventImagesDTO
+  ) {
+    const data = await this.eventService.removeEventImage(eventId, body, user);
+    await this.successResponse.ok(res, req, { data });
   }
 
   @Delete("/events/:eventId")

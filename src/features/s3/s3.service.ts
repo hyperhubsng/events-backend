@@ -63,13 +63,16 @@ export class S3Service {
     }
   }
 
-  async deleteObject(key: string) {
-    const params = {
-      Bucket: this.awsBucket,
-      Key: key,
-    };
-
+  async deleteObject(fileUrl: string) {
     try {
+      const url = new URL(fileUrl);
+      const key = decodeURIComponent(url.pathname.substring(1));
+
+      const params = {
+        Bucket: this.awsBucket,
+        Key: key,
+      };
+
       return await s3Client.send(new DeleteObjectCommand(params));
     } catch (err) {
       return Promise.reject(err);

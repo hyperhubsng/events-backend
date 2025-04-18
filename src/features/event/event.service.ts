@@ -18,6 +18,7 @@ import {
   CreateTicketDTO,
   HttpQueryDTO,
   PurchaseTicketDTO,
+  RemoveEventImagesDTO,
 } from "./event.dto";
 import { Event } from "@/datasources/mongodb/schemas/event.schema";
 import { Ticket } from "@/datasources/mongodb/schemas/ticket.schema";
@@ -1087,29 +1088,83 @@ export class EventService {
     }
   }
 
-  async removeEventImage(id: string, data: any, user: User) {
+  async removeEventImage(id: string, data: RemoveEventImagesDTO, user: User) {
     try {
-      if (!data.images) {
-        return Promise.reject({
-          ...responseHash.badPayload,
-          message: "The images to remove are needed",
-        });
-      }
-      const ticketId = new Types.ObjectId(id);
-      let ticketQuery: Record<string, any> = {
-        _id: ticketId,
+      const { query, event } = await this.getEventForOwner(id, user);
+      const { imagesToKeep, imagesToRemove } = this.prepareImagesForProcessing(
+        event,
+        data.images
+      );
+      Promise.all([
+        this.mongoService.events.updateOneOrCreate(query, {
+          $set: {
+            images: imagesToKeep,
+          },
+        }),
+        this.removeImagesFromAWS(imagesToRemove),
+      ]);
+      return imagesToKeep;
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+  async getEventForOwner(
+    id: string,
+    user: User
+  ): Promise<{ event: Event; query: Record<string, any> }> {
+    try {
+      const eventId = new Types.ObjectId(id);
+      let query: Record<string, any> = {
+        _id: eventId,
       };
 
       if (!["admin", "superadmin", "adminUser"].includes(user.userType)) {
-        ticketQuery.ownerId = user._id;
+        query.ownerId = user._id;
       }
-
-      // return await this.mongoService.tickets.updateOneOrCreate(
-      //   ticketQuery,
-      //   data
-      // );
+      const event = await this.getOneEvent(query);
+      return {
+        event,
+        query,
+      };
     } catch (err) {
       return Promise.reject(err);
+    }
+  }
+
+  async removeImagesFromAWS(imagesToRemove: string[]) {
+    try {
+      const filePromises = imagesToRemove.map((image: string) =>
+        this.s3Service.deleteObject(`${image}`)
+      );
+      await Promise.all(filePromises);
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  prepareImagesForProcessing(
+    event: Event,
+    images: string[]
+  ): { imagesToKeep: string[]; imagesToRemove: string[] } {
+    try {
+      const eventImages = event.images || [];
+      const validImages = new Set(eventImages);
+      const givenImageSet = new Set(images);
+      let imagesToRemain = [];
+      let imagesToRemove = [];
+      for (const image of validImages.values()) {
+        if (givenImageSet.has(image)) {
+          imagesToRemove.push(image);
+          continue;
+        }
+        imagesToRemain.push(image);
+      }
+      return {
+        imagesToKeep: imagesToRemain,
+        imagesToRemove,
+      };
+    } catch (err) {
+      throw new Error(err);
     }
   }
 }

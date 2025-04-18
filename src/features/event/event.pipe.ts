@@ -10,12 +10,14 @@ import {
   CreateTicketDTO,
   HttpQueryDTO,
   PurchaseTicketDTO,
+  RemoveEventImagesDTO,
 } from "./event.dto";
 import {
   addEventSchema,
   createTicketSchema,
   eventListSchema,
   purchaseTicketSchema,
+  removeEventImageSchema,
   updateEventSchema,
   updateTicketSchema,
 } from "@/shared/joi-schema";
@@ -68,5 +70,11 @@ export class UpdateEventPipe implements PipeTransform {
 export class UpdateTicketPipe implements PipeTransform {
   transform(value: CreateTicketDTO) {
     return pipeTransformer<CreateTicketDTO>(value, updateTicketSchema);
+  }
+}
+
+export class RemoveEventImagesPipe implements PipeTransform {
+  transform(value: RemoveEventImagesDTO) {
+    return pipeTransformer<RemoveEventImagesDTO>(value, removeEventImageSchema);
   }
 }

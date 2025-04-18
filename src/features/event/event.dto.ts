@@ -59,3 +59,7 @@ export class PurchaseTicketDTO {
   paymentProcessor: string;
   discountCode: string;
 }
+
+export class RemoveEventImagesDTO {
+  images: string[];
+}
