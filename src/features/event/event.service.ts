@@ -127,7 +127,7 @@ export class EventService {
     try {
       const { ownerId, coordinates } = data;
       const eventId = new Types.ObjectId(id);
-      let eventQuery: Record<string, any> = {
+      const eventQuery: Record<string, any> = {
         _id: eventId,
       };
       if (!["admin", "superadmin", "adminUser"].includes(user.userType)) {
@@ -162,10 +162,10 @@ export class EventService {
         const newticketList: ITicket[] = [];
         for (const ticket of data.tickets) {
           if (ticket.ticketId) {
-            const isTicket = await this.getTicket({ _id: ticket.ticketId });
-            await this.mongoService.tickets.updateOne(
-              { _id: isTicket._id },
-              ticket
+            await this.updateTicket(
+              ticket.ticketId,
+              ticket as unknown as CreateTicketDTO,
+              user
             );
             continue;
           }
@@ -774,7 +774,6 @@ export class EventService {
         ticket.title = isTicket.title;
         ticket.eventId = isTicket.eventId;
         ticket.ownerId = isTicket.ownerId;
-        totalAmount += ticket.amount;
         const discountAmount = await this.applyDiscount(
           ticket,
           discount,
@@ -830,20 +829,6 @@ export class EventService {
   }
   async buyTicket(eventId: string, body: PurchaseTicketDTO) {
     try {
-      //Check That the Event exists
-      //Validate that the event is still active
-      // Process the Charge Fee
-      // Check if the discount exists
-      // Process the amount per ticket and remove the necessary discount
-      // Generate the payment payload
-      // Get the payment link
-
-      //Discount checking or applying should have a dedicated route
-      // When payment is made enter the discount value , the value paid
-      // Let the attendance carry the discount info
-      // Let the payment carry the discount info
-      // Let the discount attributes be updated
-
       const { tickets, charges, discountCode } = body;
       const query: Record<string, any> = {
         _id: new Types.ObjectId(eventId),
@@ -1082,7 +1067,7 @@ export class EventService {
   async removeEvent(id: string, user: User) {
     try {
       const eventId = new Types.ObjectId(id);
-      let eventQuery: Record<string, any> = {
+      const eventQuery: Record<string, any> = {
         _id: eventId,
       };
 
@@ -1124,7 +1109,7 @@ export class EventService {
   async removeTicket(id: string, user: User) {
     try {
       const ticketId = new Types.ObjectId(id);
-      let ticketQuery: Record<string, any> = {
+      const ticketQuery: Record<string, any> = {
         _id: ticketId,
       };
 
@@ -1163,7 +1148,7 @@ export class EventService {
   async updateTicket(id: string, data: CreateTicketDTO, user: User) {
     try {
       const ticketId = new Types.ObjectId(id);
-      let ticketQuery: Record<string, any> = {
+      const ticketQuery: Record<string, any> = {
         _id: ticketId,
       };
 
@@ -1226,7 +1211,7 @@ export class EventService {
   ): Promise<{ event: Event; query: Record<string, any> }> {
     try {
       const eventId = new Types.ObjectId(id);
-      let query: Record<string, any> = {
+      const query: Record<string, any> = {
         _id: eventId,
       };
 
@@ -1262,8 +1247,8 @@ export class EventService {
       const eventImages = event.images || [];
       const validImages = new Set(eventImages);
       const givenImageSet = new Set(images);
-      let imagesToRemain = [];
-      let imagesToRemove = [];
+      const imagesToRemain = [];
+      const imagesToRemove = [];
       for (const image of validImages.values()) {
         if (givenImageSet.has(image)) {
           imagesToRemove.push(image);

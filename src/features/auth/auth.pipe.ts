@@ -1,5 +1,5 @@
 import * as Joi from "joi";
-import { BadRequestException, PipeTransform } from "@nestjs/common";
+import { PipeTransform } from "@nestjs/common";
 import { validationMessages } from "@/shared/utils/validation-messages";
 import { pipeTransformer } from "@/shared/utils/pipe.transformer";
 import {
@@ -9,8 +9,6 @@ import {
   setPasswordSchema,
 } from "@/shared/joi-schema";
 import { AddUserDTO } from "../user/user.dto";
-("");
-import { responseHash } from "@/constants";
 import {
   AuthLoginDTO,
   AuthSignupDTO,

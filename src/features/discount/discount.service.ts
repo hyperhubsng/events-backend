@@ -16,7 +16,7 @@ import { Discount } from "@/datasources/mongodb/schemas/discount.schema";
 export class DiscountService {
   constructor(
     private readonly mongoService: MongoDataServices,
-    private readonly userService: UserService
+    private readonly userService: UserService,
   ) {}
 
   async listDiscounts(req: Request, httpQuery: any, user?: User) {
@@ -47,7 +47,7 @@ export class DiscountService {
   async aggregateDiscount(
     query: any,
     skip: number = 0,
-    limit: number = 1000
+    limit: number = 1000,
   ): Promise<Discount[]> {
     try {
       const result = await this.mongoService.discounts.aggregateRecords([
@@ -182,7 +182,7 @@ export class DiscountService {
         });
       }
       const discounts = await this.mongoService.discounts.createMany(
-        discountParam
+        discountParam,
       );
       await this.mongoService.tickets.updateMany(
         {
@@ -194,7 +194,7 @@ export class DiscountService {
           $set: {
             hasDiscount: true,
           },
-        }
+        },
       );
       return discounts;
     } catch (err) {
@@ -224,7 +224,7 @@ export class DiscountService {
       }
       return await this.mongoService.discounts.updateOneOrCreateWithOldData(
         query,
-        body
+        body,
       );
     } catch (err) {
       return Promise.reject(err);
@@ -256,7 +256,7 @@ export class DiscountService {
               status: false,
               softDelete: true,
             },
-          }
+          },
         );
         return "Discount Soft Deleted Successfully";
       }

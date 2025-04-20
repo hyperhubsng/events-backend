@@ -213,7 +213,7 @@ export const addEventSchema = joi
                 "number.positive": validationMessages("orderLimit").positive,
               }),
           }),
-        })
+        }),
       )
       .optional()
       .messages({
@@ -508,7 +508,7 @@ export const eventListSchema = joi
         "cancelled",
         "upcoming",
         "past",
-        "active"
+        "active",
       )
       .optional()
       .messages({
@@ -625,7 +625,7 @@ export const purchaseTicketSchema = joi
         joi.object({
           ticketId: joi.string().custom(validateObjectId).required(),
           quantity: joi.number().required(),
-        })
+        }),
       )
       .required()
       .messages({
@@ -638,7 +638,7 @@ export const purchaseTicketSchema = joi
         joi.object({
           title: joi.string().required(),
           amount: joi.number().required(),
-        })
+        }),
       )
       .optional()
       .messages({
@@ -722,7 +722,7 @@ export const createDiscountSchema = joi
               "any.only": validationMessages("targetType").only,
               "string.base": validationMessages("targetType").string,
             }),
-        })
+        }),
       )
       .required()
       .messages({
@@ -904,7 +904,7 @@ export const updateDiscountSchema = joi
               "any.only": validationMessages("targetType").only,
               "string.base": validationMessages("targetType").string,
             }),
-        })
+        }),
       )
       .required()
       .messages({
@@ -1390,7 +1390,7 @@ export const updateEventSchema = joi
               }),
             otherwise: joi
               .string()
-              .required()
+              .optional()
               .messages({
                 "string.empty": validationMessages("title").empty,
                 "any.only": validationMessages("title").only,
@@ -1440,6 +1440,14 @@ export const updateEventSchema = joi
                 "any.only": validationMessages("quantity").only,
               }),
           }),
+          isAvailable: joi
+            .boolean()
+            .valid(true, false)
+            .optional()
+            .messages({
+              "string.empty": validationMessages("isAvailable").empty,
+              "any.only": validationMessages("isAvailable").only,
+            }),
           orderLimit: joi.when("ticketId", {
             is: null,
             then: joi
@@ -1465,7 +1473,7 @@ export const updateEventSchema = joi
                 "number.positive": validationMessages("orderLimit").positive,
               }),
           }),
-        })
+        }),
       )
       .optional()
       .messages({

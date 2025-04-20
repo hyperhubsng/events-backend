@@ -115,7 +115,6 @@ DiscountSchema.pre("findOneAndUpdate", async function (next) {
     }
     return next();
   } catch (error: any) {
-    console.log("see error", error);
     return next(error);
   }
 });

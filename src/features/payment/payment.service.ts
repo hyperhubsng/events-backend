@@ -30,7 +30,7 @@ export class PaymentService {
   constructor(
     private readonly mongoService: MongoDataServices,
     private readonly eventEmitter: EventEmitter2,
-    private readonly awsService: AwsService
+    private readonly awsService: AwsService,
   ) {}
   async makePayment(body: ITransactionData): Promise<IPaymentLinkResponse> {
     try {
@@ -70,14 +70,14 @@ export class PaymentService {
       const headers = req.headers;
       const paymentFactory = new PaymentFactory();
       const processor = paymentFactory.getProcessor(
-        PAYMENT_PROCESSORS.paystack
+        PAYMENT_PROCESSORS.paystack,
       );
       //Confirm the webhook
       await processor.confirmWebhook(body, headers);
       const paymentReference = body.data.reference as string;
       return await this.giveCustomerValue(
         paymentReference,
-        PAYMENT_PROCESSORS.paystack
+        PAYMENT_PROCESSORS.paystack,
       );
     } catch (err) {
       return Promise.reject(err);
@@ -101,7 +101,7 @@ export class PaymentService {
       const paymentFactory = new PaymentFactory();
       const paystack = paymentFactory.getProcessor("paystack");
       const verificationResponse = await paystack.confirmPaymentWithCallback(
-        paymentReference
+        paymentReference,
       );
 
       //Retrieve the stored payment Log
@@ -159,7 +159,7 @@ export class PaymentService {
       };
       this.eventEmitter.emit(
         "paystack-payment-confirmation",
-        eventManagerPayload
+        eventManagerPayload,
       );
 
       return "Payment completed. We will send value once confirmed";
@@ -174,7 +174,7 @@ export class PaymentService {
       const paymentFactory = new PaymentFactory();
       const paystack = paymentFactory.getProcessor(processor);
       const verificationResponse = await paystack.confirmPaymentWithCallback(
-        paymentReference
+        paymentReference,
       );
 
       //Retrieve the stored payment Log
@@ -215,7 +215,7 @@ export class PaymentService {
       };
       this.eventEmitter.emit(
         "paystack-payment-confirmation",
-        eventManagerPayload
+        eventManagerPayload,
       );
 
       return "Payment completed. We will send value once confirmed";
@@ -256,7 +256,7 @@ export class PaymentService {
         ? flwTransactionId
         : paymentReference;
       const verificationResponse = await processor.confirmPaymentWithCallback(
-        verificationId
+        verificationId,
       );
       const verificationStatus = conditionChecker
         ? verificationResponse.data.status
@@ -267,7 +267,7 @@ export class PaymentService {
       if (!verificationStatus.toLowerCase().startsWith("success")) {
         await this.mongoService.paymentLogs.updateOne(
           { _id: paymentLog._id },
-          { status: verificationStatus }
+          { status: verificationStatus },
         );
         return Promise.reject({
           ...responseHash.badPayload,
@@ -393,7 +393,7 @@ export class PaymentService {
           ticketQuantity: paymentData.tickets.length,
           eventTitle: paymentData.narration,
           passCode: attendeeData.passCode,
-        })
+        }),
       );
     }
   }
@@ -479,10 +479,9 @@ export class PaymentService {
             {
               $inc: {
                 quantitySold: ticket.quantity,
-                quantityAvailable: -ticket.quantity,
                 totalAmountSold: ticket.amount,
               },
-            }
+            },
           );
         }
       }
@@ -491,6 +490,9 @@ export class PaymentService {
 
   private async updateDiscount(data: IDiscountData) {
     try {
+      if (Object.keys(data).length === 0 || !data["discountCode"]) {
+        return;
+      }
       await this.mongoService.discounts.updateOneOrCreateWithOldData(
         {
           code: data.discountCode,
@@ -499,7 +501,7 @@ export class PaymentService {
           $inc: {
             quantityUsed: data.quantity,
           },
-        }
+        },
       );
     } catch (error) {
       return;
