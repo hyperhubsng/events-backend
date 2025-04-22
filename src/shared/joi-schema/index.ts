@@ -1117,7 +1117,7 @@ export const userListSchema = joi
 
     userType: joi
       .string()
-      .valid("vendor", "vendorUser", "admin", "adminUser")
+      .valid("vendor", "vendoruser", "admin", "adminuser")
       .optional()
       .messages({
         "any.required": validationMessages("userType").required,
@@ -1132,7 +1132,7 @@ export const addPermissionSchema = joi
   .object({
     resource: joi
       .string()
-      .valid("events", "tickets", "discounts", "attendees")
+      .valid("events", "tickets", "discounts", "attendees", "users")
       .required()
       .messages({
         "string.empty": validationMessages("resource").empty,
@@ -1144,6 +1144,13 @@ export const addPermissionSchema = joi
       .messages({
         "string.empty": validationMessages("title").empty,
         "any.only": validationMessages("title").only,
+      }),
+    description: joi
+      .string()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("description").empty,
+        "any.only": validationMessages("description").only,
       }),
   })
   .options({ stripUnknown: true });
@@ -1548,6 +1555,55 @@ export const removeEventImageSchema = joi
       .messages({
         "string.empty": validationMessages("images").empty,
         "any.only": validationMessages("images").only,
+      }),
+  })
+  .options({ stripUnknown: true });
+export const updateRoleSchema = joi
+  .object({
+    action: joi
+      .string()
+      .valid("add_permissions", "remove_permissions", "others")
+      .required()
+      .messages({
+        "string.empty": validationMessages("action").empty,
+        "any.only": validationMessages("action").only,
+      }),
+    permissions: joi.when("action", {
+      is: ["add_permissions", "remove_permissions"],
+      then: joi
+        .array()
+        .items(joi.string())
+        .required()
+        .messages({
+          "string.empty": validationMessages("resource").empty,
+          "any.only": validationMessages("resource").only,
+        }),
+      otherwise: joi.forbidden().messages({
+        "any.unknown":
+          "permissions is not needed if action is for other fields",
+      }),
+    }),
+    title: joi
+      .string()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("title").empty,
+        "any.only": validationMessages("title").only,
+      }),
+    description: joi
+      .string()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("description").empty,
+        "any.only": validationMessages("description").only,
+      }),
+    organisationId: joi
+      .string()
+      .optional()
+      .custom(validateObjectId)
+      .messages({
+        "string.empty": validationMessages("organisationId").empty,
+        "any.only": validationMessages("organisationId").only,
       }),
   })
   .options({ stripUnknown: true });

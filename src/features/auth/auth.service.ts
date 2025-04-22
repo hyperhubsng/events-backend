@@ -493,7 +493,7 @@ export class AuthService {
       }
       const user = await this.userService.getUser({ email: cachedEmail });
       await Promise.all([
-        this.userService.updateUser({ password }, user),
+        this.userService.updateUser({ password }, user._id, user),
         this.redisService.remove(cacheKey),
       ]);
       return true;

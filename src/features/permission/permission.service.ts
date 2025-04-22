@@ -9,7 +9,7 @@ import {
   CreateRoleDTO,
   PermissionsQueryDTO,
 } from "./permission.dto";
-import { Model, Types, _FilterQuery } from "mongoose";
+import { Types, _FilterQuery } from "mongoose";
 import { Permission } from "@/datasources/mongodb/schemas/permission.schema";
 import { responseHash } from "@/constants";
 import { User } from "@/datasources/mongodb/schemas/user.schema";
@@ -23,12 +23,14 @@ import {
 } from "@/shared/interface/interface";
 import { Reflector } from "@nestjs/core";
 import { Role } from "@/datasources/mongodb/schemas/role.schema";
+import { UserService } from "../user/user.service";
 
 @Injectable()
 export class PermissionService {
   constructor(
     private readonly mongoService: MongoDataServices,
     private readonly reflector: Reflector,
+    private readonly userService: UserService,
   ) {}
 
   async createPermission(data: CreatePermissionDTO) {
@@ -360,5 +362,107 @@ export class PermissionService {
       );
     }
     return true;
+  }
+
+  async deleteRole(roleId: string, user: User) {
+    try {
+      const userQuery: _FilterQuery<User> = {
+        role: new Types.ObjectId(roleId),
+      };
+      const roleQuery: _FilterQuery<Role> = {
+        _id: new Types.ObjectId(roleId),
+      };
+      if (!["admin", "superadmin"].includes(user?.userType.toLowerCase())) {
+        userQuery.currentOrganisation = user.currentOrganisation;
+        roleQuery.organisationId = user.currentOrganisation;
+      }
+      const role = await this.aggregateRoles(roleQuery);
+      if (role.length === 0) {
+        return Promise.reject({
+          ...responseHash.notFound,
+        });
+      }
+
+      const isRoleActive = await this.userService.getUser(userQuery);
+      if (isRoleActive) {
+        await this.mongoService.roles.updateOneOrCreate(roleQuery, {
+          $set: { softDelete: true },
+        });
+        return {
+          softDelete: true,
+        };
+      }
+      await this.mongoService.roles.deleteOne(roleQuery);
+      return {
+        role: {},
+      };
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  private async roleHelper(roleId: string, user: User) {
+    const userQuery: _FilterQuery<User> = {
+      role: new Types.ObjectId(roleId),
+    };
+    const roleQuery: _FilterQuery<Role> = {
+      _id: new Types.ObjectId(roleId),
+    };
+    if (!["admin", "superadmin"].includes(user?.userType.toLowerCase())) {
+      userQuery.currentOrganisation = user.currentOrganisation;
+      roleQuery.organisationId = user.currentOrganisation;
+    }
+    const role = await this.aggregateRoles(roleQuery);
+    if (role.length === 0) {
+      return Promise.reject({
+        ...responseHash.notFound,
+      });
+    }
+    return roleQuery;
+  }
+  async editRole(roleId: string, body: any, user: User) {
+    try {
+      const roleQuery = await this.roleHelper(roleId, user);
+      if (body.action === "add_permissions") {
+        await this.rejectIllegalPermission(body);
+        return await this.mongoService.roles.updateOneOrCreate(roleQuery, {
+          $push: {
+            permissions: {
+              $each: body.permissions,
+            },
+          },
+        });
+      }
+      if (body.action === "remove_permissions") {
+        await this.rejectIllegalPermission(body);
+        return await this.mongoService.roles.updateOneOrCreate(roleQuery, {
+          $pull: {
+            permissions: {
+              $in: body.permissions,
+            },
+          },
+        });
+      }
+      if (body.action === "others") {
+        return await this.mongoService.roles.updateOneOrCreate(roleQuery, body);
+      }
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+  private async rejectIllegalPermission(data: any) {
+    const allPermissions = await this.aggregatePermissions({}, 0, 1000);
+    const systemPermssionSet = new Set(
+      allPermissions.map((all: Permission) => all.title),
+    );
+    const invalidPermissions = new Set(data.permissions);
+    for (const elem of invalidPermissions) {
+      if (!systemPermssionSet.has(elem)) {
+        return Promise.reject({
+          ...responseHash.badPayload,
+          message: `${elem} is not a valid permission`,
+        });
+      }
+    }
   }
 }

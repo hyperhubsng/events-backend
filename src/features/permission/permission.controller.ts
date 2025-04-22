@@ -1,8 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Param,
   Post,
+  Put,
   Query,
   Req,
   Res,
@@ -15,12 +18,18 @@ import {
   CreatePermissionDTO,
   CreateRoleDTO,
   PermissionsQueryDTO,
+  UpdateRoleDTO,
 } from "./permission.dto";
-import { CreatePermissionPipe, CreateRolePipe } from "./permission.pipe";
+import {
+  CreatePermissionPipe,
+  CreateRolePipe,
+  UpdateRolePipe,
+} from "./permission.pipe";
 import { AdminGuard } from "../auth/admin.guard";
 import { UserDecorator } from "../user/user.decorator";
 import { User } from "@/datasources/mongodb/schemas/user.schema";
 import { RoleCreatorGuard } from "../auth/role.creator.guard";
+import { ObjectIdValidationPipe } from "@/shared/pipes/object-id-pipe";
 
 @Controller()
 export class PermissionController {
@@ -78,5 +87,30 @@ export class PermissionController {
       user,
     );
     await this.successResponse.ok(res, req, { data, pagination: extraData });
+  }
+
+  @UseGuards(RoleCreatorGuard)
+  @Delete("/roles/:id")
+  async deleteRoleHandler(
+    @Req() req: Request,
+    @Res() res: Response,
+    @UserDecorator() user: User,
+    @Param("id", new ObjectIdValidationPipe()) id: string,
+  ) {
+    const result = await this.permissionService.deleteRole(id, user);
+    this.successResponse.ok(res, req, { data: result });
+  }
+
+  @UseGuards(RoleCreatorGuard)
+  @Put("/roles/:id")
+  async updateRole(
+    @Req() req: Request,
+    @Res() res: Response,
+    @UserDecorator() user: User,
+    @Param("id", new ObjectIdValidationPipe()) id: string,
+    @Body(new UpdateRolePipe()) body: UpdateRoleDTO,
+  ) {
+    const result = await this.permissionService.editRole(id, body, user);
+    this.successResponse.ok(res, req, { data: result });
   }
 }

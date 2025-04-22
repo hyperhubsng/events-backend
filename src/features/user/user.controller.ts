@@ -1,12 +1,14 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Put,
   Query,
   Req,
   Res,
+  UseGuards,
 } from "@nestjs/common";
 import { UserService } from "./user.service";
 import { SuccessResponse } from "@/shared/response/success-response";
@@ -15,6 +17,8 @@ import { UserDecorator } from "./user.decorator";
 import { User } from "@/datasources/mongodb/schemas/user.schema";
 import { UserQueryDTO } from "./user.dto";
 import { UserQueryPipe } from "./user.pipe";
+import { AdminGuard } from "../auth/admin.guard";
+import { ObjectIdValidationPipe } from "@/shared/pipes/object-id-pipe";
 
 @Controller("users")
 export class UserController {
@@ -42,8 +46,9 @@ export class UserController {
     @Res() res: Response,
     @Body() body: any,
     @UserDecorator() user: User,
+    @Param("id", new ObjectIdValidationPipe()) id: string,
   ) {
-    const result = await this.userService.updateUser(body, user);
+    const result = await this.userService.updateUser(body, id, user);
     this.successResponse.ok(res, req, { data: result });
   }
 
@@ -54,6 +59,18 @@ export class UserController {
     @Param("id") id: string,
   ) {
     const result = await this.userService.getUser({ _id: id });
+    this.successResponse.ok(res, req, { data: result });
+  }
+
+  @UseGuards(AdminGuard)
+  @Delete(":id")
+  async deleteUserHandler(
+    @Req() req: Request,
+    @Res() res: Response,
+    @UserDecorator() user: User,
+    @Param("id", new ObjectIdValidationPipe()) id: string,
+  ) {
+    const result = await this.userService.deleteUser(id, user);
     this.successResponse.ok(res, req, { data: result });
   }
 }

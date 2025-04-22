@@ -25,6 +25,11 @@ export class Role extends Document {
     enum: ["global"],
   })
   tag: string;
+
+  @Prop({
+    default: false,
+  })
+  softDelete: boolean;
 }
 
 export type RoleDocument = HydratedDocument<Role>;

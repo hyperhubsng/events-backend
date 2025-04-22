@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 export class CreatePermissionDTO {
   resource: string;
   title: string;
+  description: string;
 }
 
 export class CreateRoleDTO {
@@ -22,4 +23,13 @@ export class PermissionsQueryDTO {
   cost: number;
   status: string;
   owner: Types.ObjectId;
+}
+
+export class UpdateRoleDTO {
+  title: string;
+  description: string;
+  permissions: string[];
+  organisationId: Types.ObjectId;
+  tag: string;
+  action: string;
 }

@@ -96,6 +96,11 @@ export class User extends Document {
     default: 0,
   })
   totalCommissions: number;
+
+  @Prop({
+    default: false,
+  })
+  softDelete: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
