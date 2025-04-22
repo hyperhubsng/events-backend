@@ -37,7 +37,7 @@ export class EventService {
     private readonly userService: UserService,
     private readonly paymentService: PaymentService,
     private readonly s3Service: S3Service,
-    private readonly redisService: RedisService
+    private readonly redisService: RedisService,
   ) {}
   private slugifyEventTitle(title: string) {
     return title
@@ -67,7 +67,7 @@ export class EventService {
   async addEvent(
     files: Array<Express.Multer.File>,
     data: AddEventDTO,
-    user: User
+    user: User,
   ) {
     try {
       const { ownerId, coordinates } = data;
@@ -82,7 +82,7 @@ export class EventService {
 
       await this.userService.rejectUserTyype(ownerId, "admin");
       const filePromises = files.map((file) =>
-        this.s3Service.putObject(`${uuid()}-${file.originalname}`, file.buffer)
+        this.s3Service.putObject(`${uuid()}-${file.originalname}`, file.buffer),
       );
       const fileUrls = await Promise.all(filePromises);
       data.createdBy = user._id;
@@ -99,7 +99,7 @@ export class EventService {
         data.status = "upcoming";
       }
       const event = await this.mongoService.events.create(
-        data as unknown as Partial<Event>
+        data as unknown as Partial<Event>,
       );
       if (data.tickets) {
         const ticketList: ITicket[] = [];
@@ -122,7 +122,7 @@ export class EventService {
     files: Array<Express.Multer.File>,
     id: string,
     data: AddEventDTO,
-    user: User
+    user: User,
   ) {
     try {
       const { ownerId, coordinates } = data;
@@ -145,8 +145,8 @@ export class EventService {
         const filePromises = files.map((file) =>
           this.s3Service.putObject(
             `${uuid()}-${file.originalname}`,
-            file.buffer
-          )
+            file.buffer,
+          ),
         );
         const fileUrls = await Promise.all(filePromises);
         data.images = event.images.concat(...fileUrls);
@@ -165,7 +165,7 @@ export class EventService {
             await this.updateTicket(
               ticket.ticketId,
               ticket as unknown as CreateTicketDTO,
-              user
+              user,
             );
             continue;
           }
@@ -179,7 +179,7 @@ export class EventService {
       }
       await this.mongoService.events.updateOneOrCreateWithOldData(
         eventQuery,
-        data
+        data,
       );
       return await this.getOneEvent({ _id: event._id });
     } catch (err) {
@@ -189,7 +189,7 @@ export class EventService {
 
   httpQueryFormulator(
     httpQuery: HttpQueryDTO,
-    user?: User
+    user?: User,
   ): Record<string, numStrObj> {
     let query: Record<string, numStrObj> = {};
     if (httpQuery.q) {
@@ -456,7 +456,7 @@ export class EventService {
         if (event.status !== "upcoming") {
           await this.mongoService.events.updateOne(
             { _id: eventId },
-            { status: "upcoming" }
+            { status: "upcoming" },
           );
         }
       }
@@ -620,7 +620,7 @@ export class EventService {
       await this.redisService.setEx(
         eventTicketsKey,
         JSON.stringify(queryResult),
-        60 * 60 * 24
+        60 * 60 * 24,
       );
       return queryResult;
     } catch (e) {
@@ -711,7 +711,7 @@ export class EventService {
     ticket: ITicket,
     discount: Discount,
     ticketQuantity: number,
-    ticketPrice: number
+    ticketPrice: number,
   ) {
     try {
       let discountAmount = 0;
@@ -754,7 +754,7 @@ export class EventService {
   async computeTicketAmount(
     eventId: Types.ObjectId,
     tickets: ITicket[],
-    discount: Discount
+    discount: Discount,
   ): Promise<{
     totalAmount: number;
     computedTickets: ITicket[];
@@ -778,7 +778,7 @@ export class EventService {
           ticket,
           discount,
           ticket.quantity,
-          isTicket.price
+          isTicket.price,
         );
 
         totalDiscount += discountAmount;
@@ -797,7 +797,7 @@ export class EventService {
     body: PurchaseTicketDTO,
     computedTickets: ITicket[],
     event: Event,
-    totalAmount: number
+    totalAmount: number,
   ) {
     try {
       const eventTitle = event.title;
@@ -854,7 +854,7 @@ export class EventService {
         body,
         computedTickets,
         event,
-        totalAmount
+        totalAmount,
       );
       const getPaymentLink = await this.paymentService.makePayment(paymentData);
       return {
@@ -999,7 +999,7 @@ export class EventService {
   async aggregateEventSales(
     query: any,
     skip: number = 0,
-    limit: number = 1000
+    limit: number = 1000,
   ) {
     try {
       const result = await this.mongoService.attendees.aggregateRecords([
@@ -1174,7 +1174,7 @@ export class EventService {
       }
       return await this.mongoService.tickets.updateOneOrCreate(
         ticketQuery,
-        data
+        data,
       );
     } catch (err) {
       return Promise.reject(err);
@@ -1184,13 +1184,13 @@ export class EventService {
   async removeEventImages(
     id: string,
     data: RemoveEventImagesDTO,
-    user: User
+    user: User,
   ): Promise<string[]> {
     try {
       const { query, event } = await this.getEventForOwner(id, user);
       const { imagesToKeep, imagesToRemove } = this.prepareImagesForProcessing(
         event,
-        data.images
+        data.images,
       );
       await Promise.all([
         this.mongoService.events.updateOneOrCreate(query, {
@@ -1207,7 +1207,7 @@ export class EventService {
   }
   async getEventForOwner(
     id: string,
-    user: User
+    user: User,
   ): Promise<{ event: Event; query: Record<string, any> }> {
     try {
       const eventId = new Types.ObjectId(id);
@@ -1231,7 +1231,7 @@ export class EventService {
   async removeImagesFromAWS(imagesToRemove: string[]) {
     try {
       const filePromises = imagesToRemove.map((image: string) =>
-        this.s3Service.deleteObject(`${image}`)
+        this.s3Service.deleteObject(`${image}`),
       );
       await Promise.all(filePromises);
     } catch (err) {
@@ -1241,7 +1241,7 @@ export class EventService {
 
   prepareImagesForProcessing(
     event: Event,
-    images: string[]
+    images: string[],
   ): { imagesToKeep: string[]; imagesToRemove: string[] } {
     try {
       const eventImages = event.images || [];

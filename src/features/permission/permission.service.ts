@@ -22,6 +22,7 @@ import {
   numStrObj,
 } from "@/shared/interface/interface";
 import { Reflector } from "@nestjs/core";
+import { Role } from "@/datasources/mongodb/schemas/role.schema";
 
 @Injectable()
 export class PermissionService {
@@ -45,9 +46,27 @@ export class PermissionService {
     }
   }
 
-  async getPermission(query: _FilterQuery<Permission>) {
+  async getPermission(query: _FilterQuery<Permission>): Promise<Role> {
     try {
       return await this.mongoService.permissions.getOneWithAllFields(query);
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  }
+
+  async getRole(
+    query: _FilterQuery<Role>,
+    throwError: boolean = false,
+  ): Promise<Role> {
+    try {
+      const role = await this.aggregateRoles(query);
+      if (role.length === 0 && throwError) {
+        return Promise.reject({
+          ...responseHash.notFound,
+          message: "Role not found",
+        });
+      }
+      return role ? role[0] : null;
     } catch (err) {
       return Promise.reject(err);
     }
@@ -218,17 +237,57 @@ export class PermissionService {
 
   async createRole(data: CreateRoleDTO, user: User) {
     try {
-      const isRole = await this.mongoService.roles.getOneWithAllFields({
-        title: data.title,
-        roleOwnerId: user._id,
+      const organizationId = data.organisationId || user.currentOrganisation;
+      if (!organizationId && !(user.userType.toLowerCase() === "superadmin")) {
+        return Promise.reject({
+          ...responseHash.forbiddenAction,
+          message: "You need to belong to an organisation to do this",
+        });
+      }
+      const isOrganisation = await this.mongoService.users.getOneWithAllFields({
+        _id: organizationId,
       });
+      if (!isOrganisation) {
+        return Promise.reject({
+          ...responseHash.notFound,
+          message: `Organisation not found`,
+        });
+      }
+
+      const allPermissions = await this.aggregatePermissions({}, 0, 1000);
+      const systemPermssionSet = new Set(
+        allPermissions.map((all: Permission) => all.title),
+      );
+      const invalidPermissions = new Set(data.permissions);
+      for (const elem of invalidPermissions) {
+        if (!systemPermssionSet.has(elem)) {
+          return Promise.reject({
+            ...responseHash.badPayload,
+            message: `${elem} is not a valid permission`,
+          });
+        }
+      }
+      const query: _FilterQuery<Role> = {
+        title: data.title,
+        organisationId: organizationId,
+      };
+      if (user.userType.toLowerCase() === "superadmin") {
+        query.title = data.title;
+      }
+      const isRole = await this.mongoService.roles.getOneWithAllFields(query);
       if (isRole) {
         return Promise.reject({
           ...responseHash.notFound,
           message: "You have already created this role",
         });
       }
-      data.userId = user._id;
+      if (
+        user.userType.toLowerCase() === "superadmin" &&
+        !data.organisationId
+      ) {
+        data.tag = "global";
+      }
+      data.organisationId = isOrganisation._id;
       return await this.mongoService.roles.create(data);
     } catch (err) {
       return Promise.reject(err);

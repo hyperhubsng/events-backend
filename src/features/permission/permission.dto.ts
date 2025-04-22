@@ -9,7 +9,8 @@ export class CreateRoleDTO {
   title: string;
   description: string;
   permissions: string[];
-  userId: Types.ObjectId;
+  organisationId: Types.ObjectId;
+  tag: string;
 }
 
 export class PermissionsQueryDTO {

@@ -76,13 +76,8 @@ export class UserService {
   async createOrganisation(body: AddOrganisationDTO) {
     return await this.mongoService.organisations.create(body);
   }
-  async getUserById(_id: Types.ObjectId) {
-    const user = await this.mongoService.users.getOneWithAllFields({ _id });
-    if (user) {
-      delete user.password;
-      return user;
-    }
-    return null;
+  async getUserById(_id: Types.ObjectId): Promise<User> {
+    return await this.mongoService.users.getOneWithAllFields({ _id });
   }
   httpQueryFormulator(httpQuery: UserQueryDTO): Record<string, numStrObj> {
     let query: Record<string, numStrObj> = {};

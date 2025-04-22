@@ -48,7 +48,7 @@ export class User extends Document {
   password: string;
 
   @Prop({
-    enum: ["admin", "vendor", "vendorUser", "adminUser"],
+    enum: ["admin", "vendor", "vendoruser", "adminuser"],
     default: "vendor",
   })
   userType: string;

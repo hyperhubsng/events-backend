@@ -14,6 +14,7 @@ export class AuthSignupDTO {
 export class AuthVerifyAccountDTO {
   otp: string;
   otpEmail: string;
+  isVerified: true;
 }
 
 export class ForgotPasswordDTO {

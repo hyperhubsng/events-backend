@@ -238,8 +238,8 @@ export const signupSchema = joi
       }),
     userType: joi
       .string()
-      .valid("vendor", "vendorUser", "adminUser")
-      .required()
+      .valid("vendor", "vendoruser", "adminuser")
+      .optional()
       .messages({
         "string.empty": validationMessages("userType").empty,
         "any.required": validationMessages("userType").required,
@@ -326,7 +326,7 @@ export const signupSchema = joi
         }),
     }),
     role: joi.when("userType", {
-      is: ["adminUser", "vendorUser"],
+      is: ["adminuser", "vendoruser"],
       then: joi
         .string()
         .custom(validateObjectId)
@@ -1171,6 +1171,14 @@ export const addRoleSchema = joi
       .messages({
         "string.empty": validationMessages("description").empty,
         "any.only": validationMessages("description").only,
+      }),
+    organisationId: joi
+      .string()
+      .optional()
+      .custom(validateObjectId)
+      .messages({
+        "string.empty": validationMessages("organisationId").empty,
+        "any.only": validationMessages("organisationId").only,
       }),
   })
   .options({ stripUnknown: true });

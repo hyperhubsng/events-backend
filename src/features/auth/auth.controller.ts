@@ -57,6 +57,8 @@ export class AuthController {
     @Res() res: Response,
     @Body(new SignupPipe()) body: AddUserDTO,
   ) {
+    body.userType = "vendor";
+    body.accountStatus = "locked";
     const response = await this.authService.onboardOrganiser(body);
     return this.successResponse.ok(res, req, { data: response });
   }

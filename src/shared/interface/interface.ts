@@ -1,3 +1,4 @@
+import { Role } from "@/datasources/mongodb/schemas/role.schema";
 import { Types } from "mongoose";
 
 export interface ILoginData {
@@ -45,6 +46,7 @@ export interface ILoginResponse {
   userType: string;
   currentOrganisation?: Types.ObjectId;
   organisations?: Types.ObjectId[];
+  role: Partial<Role>;
 }
 
 export interface IHttpQueryParser {

@@ -3,7 +3,9 @@ import { Document, HydratedDocument, Types } from "mongoose";
 
 @Schema({ timestamps: true })
 export class Role extends Document {
-  @Prop()
+  @Prop({
+    lowercase: true,
+  })
   title: string;
   @Prop()
   permissions: string[];
@@ -11,8 +13,18 @@ export class Role extends Document {
   @Prop()
   userId: Types.ObjectId;
 
+  @Prop({
+    type: Types.ObjectId,
+    ref: "users",
+  })
+  organisationId: Types.ObjectId;
+
   @Prop()
   description: string;
+  @Prop({
+    enum: ["global"],
+  })
+  tag: string;
 }
 
 export type RoleDocument = HydratedDocument<Role>;
