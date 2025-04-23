@@ -1,7 +1,10 @@
 import { pipeTransformer } from "@/shared/utils/pipe.transformer";
 import { PipeTransform } from "@nestjs/common";
-import { addPermissionSchema, addRoleSchema } from "@/shared/joi-schema";
-import { responseHash } from "@/constants";
+import {
+  addPermissionSchema,
+  addRoleSchema,
+  updateRoleSchema,
+} from "@/shared/joi-schema";
 import { CreatePermissionDTO, CreateRoleDTO } from "./permission.dto";
 
 export class CreatePermissionPipe implements PipeTransform {
@@ -13,5 +16,11 @@ export class CreatePermissionPipe implements PipeTransform {
 export class CreateRolePipe implements PipeTransform {
   transform(value: CreateRoleDTO) {
     return pipeTransformer<CreateRoleDTO>(value, addRoleSchema);
+  }
+}
+
+export class UpdateRolePipe implements PipeTransform {
+  transform(value: CreateRoleDTO) {
+    return pipeTransformer<CreateRoleDTO>(value, updateRoleSchema);
   }
 }

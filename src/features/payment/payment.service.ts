@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { PaymentFactory } from "./payment.factory";
 import {
   IAttendee,
+  IDiscountData,
   IPaymentConfirmationEvent,
   IPaymentData,
   ITransactionData,
@@ -33,7 +34,11 @@ export class PaymentService {
   ) {}
   async makePayment(body: ITransactionData): Promise<IPaymentLinkResponse> {
     try {
-      body.amount = appConfig.isLive ? body.amount : 1000;
+      body.amount = appConfig.isLive
+        ? body.amount
+        : body.amount > 5000
+        ? 1000
+        : body.amount;
       const paymentFactory = new PaymentFactory();
       const processor = paymentFactory.getProcessor(body.processor);
       const paymentResult = await processor.makePayment(body);
@@ -41,7 +46,6 @@ export class PaymentService {
     } catch (err) {
       return Promise.reject(err);
     } finally {
-      //Log the purchase order and the associated payment information
       this.logPayment(body);
     }
   }
@@ -51,7 +55,6 @@ export class PaymentService {
       const storeData = {
         paymentReference: body.paymentReference,
         amount: body.originalAmount,
-        testAmount: 1000,
         meta: body,
       };
       await this.mongoService.paymentLogs.create(storeData);
@@ -135,12 +138,23 @@ export class PaymentService {
           email: paymentMeta.email,
           phoneNumber: paymentMeta.phoneNumber,
           passCode: this.generateCode(),
+          discountAmount: paymentMeta.discountAmount,
+          discountCode: paymentMeta.discountCode,
+          hasDiscount: paymentMeta.discountAmount ? true : false,
         },
         paymentData: {
           userIdentifier: paymentMeta.email,
           paymentDate: new Date(verificationResponse.paid_at),
           amount: paymentMeta.originalAmount,
+          discountAmount: paymentMeta.discountAmount,
+          discountCode: paymentMeta.discountCode,
+          hasDiscount: paymentMeta.discountAmount ? true : false,
           ...paymentMeta,
+        },
+        discountData: {
+          discountAmount: paymentMeta.discountAmount,
+          discountCode: paymentMeta.discountCode,
+          quantity: 1,
         },
       };
       this.eventEmitter.emit(
@@ -281,12 +295,23 @@ export class PaymentService {
           email: paymentMeta.email,
           phoneNumber: paymentMeta.phoneNumber,
           passCode: passCode,
+          discountAmount: paymentMeta.discountAmount,
+          discountCode: paymentMeta.discountCode,
+          hasDiscount: paymentMeta.discountAmount ? true : false,
         },
         paymentData: {
           userIdentifier: paymentMeta.email,
           paymentDate: new Date(paymentDate),
-          amount: paymentMeta.originalAmount,
           ...paymentMeta,
+          amount: paymentMeta.originalAmount,
+          discountAmount: paymentMeta.discountAmount,
+          discountCode: paymentMeta.discountCode,
+          hasDiscount: paymentMeta.discountAmount ? true : false,
+        },
+        discountData: {
+          discountAmount: paymentMeta.discountAmount,
+          discountCode: paymentMeta.discountCode,
+          quantity: 1,
         },
       };
       await this.honourPayment(paymentPayload);
@@ -326,8 +351,13 @@ export class PaymentService {
 
   async honourPayment(data: IPaymentConfirmationEvent) {
     let hasError = false;
-    const { paymentReference, paymentLogData, paymentData, attendeeData } =
-      data;
+    const {
+      paymentReference,
+      paymentLogData,
+      paymentData,
+      attendeeData,
+      discountData,
+    } = data;
     try {
       return Promise.all([
         //Update the payment Log
@@ -335,6 +365,8 @@ export class PaymentService {
         //Add new payment information
         this.insertPayment(paymentData),
         this.insertAttendee(attendeeData),
+        //Update the discount
+        this.updateDiscount(discountData),
         //Dispatch notification
         this.sendNotification(),
       ]);
@@ -371,7 +403,8 @@ export class PaymentService {
   }
 
   private insertPayment(body: IPaymentData) {
-    const { charges, tickets } = body;
+    const { charges, tickets, discountAmount, discountCode, hasDiscount } =
+      body;
     const payments: Partial<Payment>[] = [];
     if (charges && charges.length > 0) {
       payments.push({
@@ -379,6 +412,9 @@ export class PaymentService {
         amount: charges.reduce((a, b) => a + b.amount, 0),
         beneficiary: "platform",
         narration: body.narration + ": Fee charged",
+        discountAmount,
+        hasDiscount,
+        discountCode,
         //Have an account for beneficiary which is a platform owner
       });
     }
@@ -396,7 +432,17 @@ export class PaymentService {
 
   private async insertAttendee(data: IAttendee) {
     let doesNotHaveError = true;
-    const { tickets, firstName, lastName, email, phoneNumber, passCode } = data;
+    const {
+      tickets,
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+      passCode,
+      hasDiscount,
+      discountAmount,
+      discountCode,
+    } = data;
     const attendeeData: Partial<Attendee>[] = [];
     for (const ticket of tickets) {
       attendeeData.push({
@@ -412,6 +458,9 @@ export class PaymentService {
         phoneNumber,
         title: ticket.title,
         passCode,
+        discountAmount,
+        discountCode,
+        hasDiscount,
       });
     }
     try {
@@ -430,13 +479,32 @@ export class PaymentService {
             {
               $inc: {
                 quantitySold: ticket.quantity,
-                quantityAvailable: -ticket.quantity,
                 totalAmountSold: ticket.amount,
               },
             },
           );
         }
       }
+    }
+  }
+
+  private async updateDiscount(data: IDiscountData) {
+    try {
+      if (Object.keys(data).length === 0 || !data["discountCode"]) {
+        return;
+      }
+      await this.mongoService.discounts.updateOneOrCreateWithOldData(
+        {
+          code: data.discountCode,
+        },
+        {
+          $inc: {
+            quantityUsed: data.quantity,
+          },
+        },
+      );
+    } catch (error) {
+      return;
     }
   }
 

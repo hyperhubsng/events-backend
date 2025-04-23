@@ -23,7 +23,19 @@ export class UserService {
 
   async getUser(param: _FilterQuery<User>): Promise<User> {
     try {
-      return await this.mongoService.users.getOneWithAllFields(param);
+      return await this.mongoService.users.getOneWithFields(param);
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  async deleteUser(userId: string, user: User): Promise<User> {
+    try {
+      return await this.updateUser(
+        { softDelete: true, accountStatus: "inactive" },
+        userId,
+        user,
+      );
     } catch (e) {
       return Promise.reject(e);
     }
@@ -58,31 +70,39 @@ export class UserService {
     }
     return;
   }
+  async checkForInvalidUser(queryParam: Record<string, any>[]): Promise<void> {
+    const user: any = await this.mongoService.users.getOne(
+      { $or: queryParam },
+      ["email"],
+    );
+    if (!user) {
+      return Promise.reject(responseHash.notFound);
+    }
+    return user;
+  }
   async addUser(body: AddUserDTO): Promise<User> {
     return await this.mongoService.users.create(body);
   }
 
-  async updateUser(body: Partial<User>, user: User) {
-    if (user.needsToChangePassword) {
+  async updateUser(
+    body: Partial<User>,
+    userId: Types.ObjectId | string,
+    user?: User,
+  ) {
+    await this.checkForInvalidUser([{ _id: userId }]);
+    if (user && user.needsToChangePassword) {
       body.needsToChangePassword = false;
       body.accountStatus = "active";
     }
-    return await this.mongoService.users.updateOneOrCreateWithOldData(
-      { _id: user._id },
-      body,
-    );
+    await this.mongoService.users.updateOneOrCreate({ _id: userId }, body);
+    return await this.aggregateUserInfo({ _id: new Types.ObjectId(userId) });
   }
 
   async createOrganisation(body: AddOrganisationDTO) {
     return await this.mongoService.organisations.create(body);
   }
-  async getUserById(_id: Types.ObjectId) {
-    const user = await this.mongoService.users.getOneWithAllFields({ _id });
-    if (user) {
-      delete user.password;
-      return user;
-    }
-    return null;
+  async getUserById(_id: Types.ObjectId): Promise<User> {
+    return await this.mongoService.users.getOneWithAllFields({ _id });
   }
   httpQueryFormulator(httpQuery: UserQueryDTO): Record<string, numStrObj> {
     let query: Record<string, numStrObj> = {};
@@ -119,28 +139,27 @@ export class UserService {
     try {
       if (
         !user.currentOrganisation &&
-        !["admin", "adminUser"].includes(user.userType)
+        !["admin", "adminuser", "superadmin"].includes(
+          user.userType.toLowerCase(),
+        )
       ) {
         return Promise.reject(responseHash.forbiddenAction);
       }
 
       const { skip, docLimit, filters, populate } = HTTPQueryParser(req.query);
       const query: Record<string, any> = this.httpQueryFormulator(httpQuery);
-      if (!["admin", "adminUser"].includes(user.userType)) {
+      if (
+        !["admin", "adminuser", "superadmin"].includes(
+          user.userType.toLowerCase(),
+        )
+      ) {
         query.currentOrganisation = new Types.ObjectId(
           user.currentOrganisation,
         );
       }
       filters.push("-password");
 
-      const users = await this.mongoService.users.getAll(
-        query,
-        filters,
-        populate,
-        docLimit,
-        skip,
-        "createdAt",
-      );
+      const users = await this.aggregateUserInfo(query, docLimit, skip);
 
       const userCount = await this.mongoService.users.count(query);
       const extraData: IPagination = ResponseExtraData(req, userCount);
@@ -150,11 +169,12 @@ export class UserService {
       if (httpQuery.userType) {
         statsQuery.userType = httpQuery.userType;
       }
-      if (!["admin", "adminUser"].includes(user.userType)) {
+      if (!["admin", "adminuser", "superadmin"].includes(user.userType)) {
         statsQuery.currentOrganisation = new Types.ObjectId(
           user.currentOrganisation,
         );
       }
+
       const [activeUsers, inactiveUsers] = await Promise.all([
         this.mongoService.users.count({
           ...statsQuery,
@@ -203,7 +223,6 @@ export class UserService {
     hasEmail: true,
   ): Promise<void> {
     try {
-      //Check to Ensure Email is Unique
       if (hasEmail) {
         const emailField = fieldsToCheck[0];
         await this.isTemporaryUser(emailField.email);
@@ -211,6 +230,90 @@ export class UserService {
       await this.checkForExistingUser(fieldsToCheck);
     } catch (e) {
       return Promise.reject(e);
+    }
+  }
+
+  async aggregateUserInfo(
+    query: Record<string, any>,
+    limit: number = 1000,
+    skip: number = 0,
+  ) {
+    try {
+      return await this.mongoService.users.aggregateRecords([
+        {
+          $match: query,
+        },
+        {
+          $lookup: {
+            from: "roles",
+            let: {
+              roleId: "$role",
+            },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$_id", "$$roleId"],
+                  },
+                },
+              },
+              {
+                $project: {
+                  roleId: "$_id",
+                  _id: 0,
+                  title: 1,
+                  permissions: 1,
+                  organisationId: 1,
+                  description: 1,
+                  softDelete: 1,
+                },
+              },
+            ],
+            as: "role",
+          },
+        },
+        {
+          $unwind: "$role",
+        },
+        {
+          $project: {
+            softDelete: 1,
+            country: 1,
+            userType: 1,
+            needsToChangePassword: 1,
+            organisations: 1,
+            accountStatus: 1,
+            totalEvents: 1,
+            totalRevenue: 1,
+            totalCommissions: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            email: 1,
+            companyName: 1,
+            lastName: 1,
+            firstName: 1,
+            dob: { $ifNull: ["$dob", ""] },
+            gender: { $ifNull: ["$gender", ""] },
+            role: { $ifNull: ["$role", ""] },
+            designation: { $ifNull: ["$designation", ""] },
+            phoneNumber: { $ifNull: ["$phoneNumber", ""] },
+            profileImageUrl: { $ifNull: ["$profileImageUrl", ""] },
+          },
+        },
+        {
+          $skip: skip,
+        },
+        {
+          $limit: limit,
+        },
+        {
+          $sort: {
+            createdAt: -1,
+          },
+        },
+      ]);
+    } catch (err) {
+      return Promise.reject(err);
     }
   }
 }

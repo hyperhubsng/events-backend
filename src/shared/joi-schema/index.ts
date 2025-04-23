@@ -105,6 +105,121 @@ export const addEventSchema = joi
         "any.only": validationMessages("endDate").only,
         "string.base": validationMessages("endDate").string,
       }),
+    tickets: joi
+      .array()
+      .items(
+        joi.object({
+          ticketId: joi.string().custom(validateObjectId).optional(),
+          description: joi.when("ticketId", {
+            is: null,
+            then: joi
+              .string()
+              .required()
+              .messages({
+                "string.empty": validationMessages("description").empty,
+                "any.only": validationMessages("description").only,
+              }),
+            otherwise: joi
+              .string()
+              .optional()
+              .messages({
+                "string.empty": validationMessages("description").empty,
+                "any.only": validationMessages("description").only,
+              }),
+          }),
+          title: joi.when("ticketId", {
+            is: null,
+            then: joi
+              .string()
+              .required()
+              .messages({
+                "string.empty": validationMessages("title").empty,
+                "any.only": validationMessages("title").only,
+              }),
+            otherwise: joi
+              .string()
+              .required()
+              .messages({
+                "string.empty": validationMessages("title").empty,
+                "any.only": validationMessages("title").only,
+              }),
+          }),
+          price: joi.when("ticketId", {
+            is: null,
+            then: joi
+              .number()
+              .min(500)
+              .required()
+              .messages({
+                "string.empty": validationMessages("price").empty,
+                "any.only": validationMessages("price").only,
+                "number.base": validationMessages("price").number,
+                "any.required": validationMessages("price").required,
+                "number.min": validationMessages("price").min,
+                "number.positive": validationMessages("price").positive,
+              }),
+            otherwise: joi
+              .number()
+              .min(500)
+              .optional()
+              .messages({
+                "string.empty": validationMessages("price").empty,
+                "any.only": validationMessages("price").only,
+                "number.base": validationMessages("price").number,
+                "any.required": validationMessages("price").required,
+                "number.min": validationMessages("price").min,
+                "number.positive": validationMessages("price").positive,
+              }),
+          }),
+          quantity: joi.when("ticketId", {
+            is: null,
+            then: joi
+              .number()
+              .required()
+              .messages({
+                "string.empty": validationMessages("quantity").empty,
+                "any.only": validationMessages("quantity").only,
+              }),
+            otherwise: joi
+              .number()
+              .optional()
+              .messages({
+                "string.empty": validationMessages("quantity").empty,
+                "any.only": validationMessages("quantity").only,
+              }),
+          }),
+          orderLimit: joi.when("ticketId", {
+            is: null,
+            then: joi
+              .number()
+              .positive()
+              .min(0)
+              .required()
+              .messages({
+                "string.empty": validationMessages("orderLimit").empty,
+                "any.only": validationMessages("orderLimit").only,
+                "number.min": validationMessages("orderLimit").min,
+                "number.positive": validationMessages("orderLimit").positive,
+              }),
+            otherwise: joi
+              .number()
+              .positive()
+              .min(0)
+              .optional()
+              .messages({
+                "string.empty": validationMessages("orderLimit").empty,
+                "any.only": validationMessages("orderLimit").only,
+                "number.min": validationMessages("orderLimit").min,
+                "number.positive": validationMessages("orderLimit").positive,
+              }),
+          }),
+        }),
+      )
+      .optional()
+      .messages({
+        "any.required": validationMessages("tickets").required,
+        "any.only": validationMessages("tickets").only,
+      }),
   })
   .options({ stripUnknown: true });
 
@@ -123,8 +238,8 @@ export const signupSchema = joi
       }),
     userType: joi
       .string()
-      .valid("vendor", "vendorUser", "adminUser")
-      .required()
+      .valid("vendor", "vendoruser", "adminuser")
+      .optional()
       .messages({
         "string.empty": validationMessages("userType").empty,
         "any.required": validationMessages("userType").required,
@@ -211,7 +326,7 @@ export const signupSchema = joi
         }),
     }),
     role: joi.when("userType", {
-      is: ["adminUser", "vendorUser"],
+      is: ["adminuser", "vendoruser"],
       then: joi
         .string()
         .custom(validateObjectId)
@@ -549,6 +664,15 @@ export const purchaseTicketSchema = joi
         "any.only": validationMessages("paymentProcessor").only,
         "string.base": validationMessages("paymentProcessor").string,
       }),
+    discountCode: joi
+      .string()
+      .optional()
+      .messages({
+        "any.required": validationMessages("discountCode").required,
+        "string.empty": validationMessages("discountCode").empty,
+        "any.only": validationMessages("discountCode").only,
+        "string.base": validationMessages("discountCode").string,
+      }),
   })
   .options({ stripUnknown: true });
 
@@ -590,7 +714,7 @@ export const createDiscountSchema = joi
           targetId: joi.string().custom(validateObjectId).required(),
           targetType: joi
             .string()
-            .valid("event", "ticket")
+            .valid("ticket")
             .required()
             .messages({
               "any.required": validationMessages("targetType").required,
@@ -993,7 +1117,7 @@ export const userListSchema = joi
 
     userType: joi
       .string()
-      .valid("vendor", "vendorUser", "admin", "adminUser")
+      .valid("vendor", "vendoruser", "admin", "adminuser")
       .optional()
       .messages({
         "any.required": validationMessages("userType").required,
@@ -1008,7 +1132,7 @@ export const addPermissionSchema = joi
   .object({
     resource: joi
       .string()
-      .valid("events", "tickets", "discounts", "attendees")
+      .valid("events", "tickets", "discounts", "attendees", "users")
       .required()
       .messages({
         "string.empty": validationMessages("resource").empty,
@@ -1020,6 +1144,13 @@ export const addPermissionSchema = joi
       .messages({
         "string.empty": validationMessages("title").empty,
         "any.only": validationMessages("title").only,
+      }),
+    description: joi
+      .string()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("description").empty,
+        "any.only": validationMessages("description").only,
       }),
   })
   .options({ stripUnknown: true });
@@ -1047,6 +1178,14 @@ export const addRoleSchema = joi
       .messages({
         "string.empty": validationMessages("description").empty,
         "any.only": validationMessages("description").only,
+      }),
+    organisationId: joi
+      .string()
+      .optional()
+      .custom(validateObjectId)
+      .messages({
+        "string.empty": validationMessages("organisationId").empty,
+        "any.only": validationMessages("organisationId").only,
       }),
   })
   .options({ stripUnknown: true });
@@ -1124,6 +1263,347 @@ export const analyticsQuerySchema = joi
         "string.empty": validationMessages("presentation").empty,
         "any.only": validationMessages("presentation").only,
         "string.base": validationMessages("presentation").string,
+      }),
+  })
+  .options({ stripUnknown: true });
+
+export const updateEventSchema = joi
+  .object({
+    description: joi
+      .string()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("description").empty,
+        "any.only": validationMessages("description").only,
+      }),
+    title: joi
+      .string()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("title").empty,
+        "any.only": validationMessages("title").only,
+      }),
+    eventType: joi
+      .string()
+      .valid("free", "paid")
+      .optional()
+      .messages({
+        "string.empty": validationMessages("title").empty,
+        "any.only": validationMessages("title").only,
+      }),
+    venue: joi
+      .string()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("venue").empty,
+        "any.only": validationMessages("venue").only,
+      }),
+    coordinates: joi
+      .array()
+      .items(joi.number().strict().required())
+      .length(2)
+      .optional()
+      .messages({
+        "string.empty": validationMessages("coordinates").empty,
+        "any.only": validationMessages("coordinates").only,
+        "array.base": validationMessages("coordinates").base,
+        "array.length": validationMessages("coordinates").length,
+        "number.base": validationMessages("coordinates").numberBase,
+      }),
+    ownerId: joi
+      .string()
+      .optional()
+      .custom(validateObjectId)
+      .messages({
+        "string.empty": validationMessages("ownerId").empty,
+        "any.only": validationMessages("ownerId").only,
+      }),
+    cost: joi
+      .number()
+      .positive()
+      .precision(2)
+      .strict()
+      .min(500)
+      .optional()
+      .messages({
+        "string.empty": validationMessages("cost").empty,
+        "any.only": validationMessages("cost").only,
+        "number.base": validationMessages("cost").number,
+        "any.required": validationMessages("cost").required,
+        "number.min": validationMessages("cost").min,
+        "number.positive": validationMessages("cost").positive,
+      }),
+    availableSlots: joi
+      .number()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("availableSlots").empty,
+        "any.only": validationMessages("availableSlots").only,
+      }),
+    startDate: joi
+      .date()
+      .custom(rejectPastDate)
+      .format("YYYY-MM-DD HH:mm")
+      .optional()
+      .messages({
+        "any.required": validationMessages("startDate").required,
+        "string.pattern.base":
+          "Provide a valid startDate in YYYY-MM-DD HH:mm format",
+        "string.empty": validationMessages("startDate").empty,
+        "any.only": validationMessages("startDate").only,
+        "string.base": validationMessages("startDate").string,
+      }),
+    endDate: joi.when("startDate", {
+      is: joi.exist(),
+      then: joi
+        .date()
+        .custom(dateChecker)
+        .format("YYYY-MM-DD HH:mm")
+        .required()
+        .messages({
+          "any.required": validationMessages("endDate").required,
+          "string.pattern.base":
+            "Provide a valid matchDate in YYYY-MM-DD HH:mm format",
+          "string.empty": validationMessages("endDate").empty,
+          "any.only": validationMessages("endDate").only,
+          "string.base": validationMessages("endDate").string,
+        }),
+      otherwise: joi.forbidden().messages({
+        "any.unknown": "endDate is not allowed if startDate is not provided",
+      }),
+    }),
+    tickets: joi
+      .array()
+      .items(
+        joi.object({
+          ticketId: joi.string().custom(validateObjectId).optional(),
+          description: joi.when("ticketId", {
+            is: null,
+            then: joi
+              .string()
+              .required()
+              .messages({
+                "string.empty": validationMessages("description").empty,
+                "any.only": validationMessages("description").only,
+              }),
+            otherwise: joi
+              .string()
+              .optional()
+              .messages({
+                "string.empty": validationMessages("description").empty,
+                "any.only": validationMessages("description").only,
+              }),
+          }),
+          title: joi.when("ticketId", {
+            is: null,
+            then: joi
+              .string()
+              .required()
+              .messages({
+                "string.empty": validationMessages("title").empty,
+                "any.only": validationMessages("title").only,
+              }),
+            otherwise: joi
+              .string()
+              .optional()
+              .messages({
+                "string.empty": validationMessages("title").empty,
+                "any.only": validationMessages("title").only,
+              }),
+          }),
+          price: joi.when("ticketId", {
+            is: null,
+            then: joi
+              .number()
+              .min(500)
+              .required()
+              .messages({
+                "string.empty": validationMessages("price").empty,
+                "any.only": validationMessages("price").only,
+                "number.base": validationMessages("price").number,
+                "any.required": validationMessages("price").required,
+                "number.min": validationMessages("price").min,
+                "number.positive": validationMessages("price").positive,
+              }),
+            otherwise: joi
+              .number()
+              .min(500)
+              .optional()
+              .messages({
+                "string.empty": validationMessages("price").empty,
+                "any.only": validationMessages("price").only,
+                "number.base": validationMessages("price").number,
+                "any.required": validationMessages("price").required,
+                "number.min": validationMessages("price").min,
+                "number.positive": validationMessages("price").positive,
+              }),
+          }),
+          quantity: joi.when("ticketId", {
+            is: null,
+            then: joi
+              .number()
+              .required()
+              .messages({
+                "string.empty": validationMessages("quantity").empty,
+                "any.only": validationMessages("quantity").only,
+              }),
+            otherwise: joi
+              .number()
+              .optional()
+              .messages({
+                "string.empty": validationMessages("quantity").empty,
+                "any.only": validationMessages("quantity").only,
+              }),
+          }),
+          isAvailable: joi
+            .boolean()
+            .valid(true, false)
+            .optional()
+            .messages({
+              "string.empty": validationMessages("isAvailable").empty,
+              "any.only": validationMessages("isAvailable").only,
+            }),
+          orderLimit: joi.when("ticketId", {
+            is: null,
+            then: joi
+              .number()
+              .positive()
+              .min(0)
+              .required()
+              .messages({
+                "string.empty": validationMessages("orderLimit").empty,
+                "any.only": validationMessages("orderLimit").only,
+                "number.min": validationMessages("orderLimit").min,
+                "number.positive": validationMessages("orderLimit").positive,
+              }),
+            otherwise: joi
+              .number()
+              .positive()
+              .min(0)
+              .optional()
+              .messages({
+                "string.empty": validationMessages("orderLimit").empty,
+                "any.only": validationMessages("orderLimit").only,
+                "number.min": validationMessages("orderLimit").min,
+                "number.positive": validationMessages("orderLimit").positive,
+              }),
+          }),
+        }),
+      )
+      .optional()
+      .messages({
+        "any.required": validationMessages("tickets").required,
+        "any.only": validationMessages("tickets").only,
+      }),
+  })
+  .options({ stripUnknown: true });
+
+export const updateTicketSchema = joi
+  .object({
+    description: joi
+      .string()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("description").empty,
+        "any.only": validationMessages("description").only,
+      }),
+    title: joi
+      .string()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("title").empty,
+        "any.only": validationMessages("title").only,
+      }),
+    price: joi
+      .number()
+      .min(500)
+      .optional()
+      .messages({
+        "string.empty": validationMessages("price").empty,
+        "any.only": validationMessages("price").only,
+        "number.base": validationMessages("price").number,
+        "any.required": validationMessages("price").required,
+        "number.min": validationMessages("price").min,
+        "number.positive": validationMessages("price").positive,
+      }),
+    quantity: joi
+      .number()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("quantity").empty,
+        "any.only": validationMessages("quantity").only,
+      }),
+    orderLimit: joi
+      .number()
+      .optional()
+      .min(0)
+      .optional()
+      .messages({
+        "string.empty": validationMessages("orderLimit").empty,
+        "any.only": validationMessages("orderLimit").only,
+        "number.min": validationMessages("orderLimit").min,
+        "number.positive": validationMessages("orderLimit").positive,
+      }),
+  })
+  .options({ stripUnknown: true });
+
+export const removeEventImageSchema = joi
+  .object({
+    images: joi
+      .array()
+      .items(joi.string().required())
+      .messages({
+        "string.empty": validationMessages("images").empty,
+        "any.only": validationMessages("images").only,
+      }),
+  })
+  .options({ stripUnknown: true });
+export const updateRoleSchema = joi
+  .object({
+    action: joi
+      .string()
+      .valid("add_permissions", "remove_permissions", "others")
+      .required()
+      .messages({
+        "string.empty": validationMessages("action").empty,
+        "any.only": validationMessages("action").only,
+      }),
+    permissions: joi.when("action", {
+      is: ["add_permissions", "remove_permissions"],
+      then: joi
+        .array()
+        .items(joi.string())
+        .required()
+        .messages({
+          "string.empty": validationMessages("resource").empty,
+          "any.only": validationMessages("resource").only,
+        }),
+      otherwise: joi.forbidden().messages({
+        "any.unknown":
+          "permissions is not needed if action is for other fields",
+      }),
+    }),
+    title: joi
+      .string()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("title").empty,
+        "any.only": validationMessages("title").only,
+      }),
+    description: joi
+      .string()
+      .optional()
+      .messages({
+        "string.empty": validationMessages("description").empty,
+        "any.only": validationMessages("description").only,
+      }),
+    organisationId: joi
+      .string()
+      .optional()
+      .custom(validateObjectId)
+      .messages({
+        "string.empty": validationMessages("organisationId").empty,
+        "any.only": validationMessages("organisationId").only,
       }),
   })
   .options({ stripUnknown: true });

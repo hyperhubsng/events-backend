@@ -3,9 +3,11 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
+  Put,
   Query,
   Req,
   Res,
@@ -25,12 +27,16 @@ import {
   CreateTicketDTO,
   HttpQueryDTO,
   PurchaseTicketDTO,
+  RemoveEventImagesDTO,
 } from "./event.dto";
 import {
   AddEventPipe,
   CreateTicketPipe,
   EventQueryPipe,
   PurchaseTicketPipe,
+  RemoveEventImagesPipe,
+  UpdateEventPipe,
+  UpdateTicketPipe,
 } from "./event.pipe";
 import { PaymentService } from "../payment/payment.service";
 import { FilesInterceptor } from "@nestjs/platform-express";
@@ -39,7 +45,7 @@ import { PermissionsMeta } from "../permission/permission.decorator";
 
 const MAX_FILES = 5;
 
-@Controller("events")
+@Controller()
 export class EventsController {
   constructor(
     private readonly successResponse: SuccessResponse,
@@ -47,7 +53,7 @@ export class EventsController {
     private readonly paymentService: PaymentService,
   ) {}
 
-  @Post()
+  @Post("events")
   @UseInterceptors(
     FilesInterceptor("files", MAX_FILES, {
       storage: multer.memoryStorage(),
@@ -67,7 +73,7 @@ export class EventsController {
     await this.successResponse.ok(res, req, { data });
   }
 
-  @Get()
+  @Get("events")
   @SetMetadata("accessTitle", "ListEvents")
   @PermissionsMeta("ListEvents")
   async listEvents(
@@ -85,7 +91,7 @@ export class EventsController {
   }
 
   @PUBLIC()
-  @Get("/verify-paystack-payment")
+  @Get("/events/verify-paystack-payment")
   async verifyPaystackPayment(@Req() req: Request, @Res() res: Response) {
     const data = await this.paymentService.runPaystackCallback(
       req.query.reference as string,
@@ -93,8 +99,31 @@ export class EventsController {
     await this.successResponse.ok(res, req, { data });
   }
 
+  @Delete("/tickets/:ticketId")
+  async removeTicket(
+    @Req() req: Request,
+    @Res() res: Response,
+    @UserDecorator() user: User,
+    @Param("ticketId", new ObjectIdValidationPipe()) ticketId: string,
+  ) {
+    const data = await this.eventService.removeTicket(ticketId, user);
+    await this.successResponse.ok(res, req, { data });
+  }
+
+  @Put("/tickets/:ticketId")
+  async updateTicket(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Body(new UpdateTicketPipe()) body: CreateTicketDTO,
+    @UserDecorator() user: User,
+    @Param("ticketId", new ObjectIdValidationPipe()) ticketId: string,
+  ) {
+    const data = await this.eventService.updateTicket(ticketId, body, user);
+    await this.successResponse.ok(res, req, { data });
+  }
+
   @PUBLIC()
-  @Get("/fetch-for-public")
+  @Get("/events/fetch-for-public")
   async listCommunitiesForAnons(
     @Req() req: Request,
     @Res() res: Response,
@@ -105,7 +134,7 @@ export class EventsController {
     await this.successResponse.ok(res, req, { data, pagination: extraData });
   }
 
-  @Post("/:eventId/tickets")
+  @Post("/events/:eventId/tickets")
   async createTicket(
     @Req() req: Request,
     @Res() res: Response,
@@ -118,7 +147,7 @@ export class EventsController {
   }
 
   @PUBLIC()
-  @Get("/:eventId/tickets")
+  @Get("/events/:eventId/tickets")
   async listTickets(
     @Req() req: Request,
     @Res() res: Response,
@@ -130,7 +159,7 @@ export class EventsController {
   }
 
   @PUBLIC()
-  @Post("/:eventId/purchase")
+  @Post("/events/:eventId/purchase")
   async buyTicket(
     @Req() req: Request,
     @Res() res: Response,
@@ -141,7 +170,19 @@ export class EventsController {
     await this.successResponse.ok(res, req, { data });
   }
 
-  @Get("/:eventId/sales-report")
+  @PUBLIC()
+  @Post("/events/:eventId/apply-discount")
+  async applyDiscountToTicketPurchase(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Param("eventId", new ObjectIdValidationPipe()) eventId: string,
+    @Body(new PurchaseTicketPipe()) body: PurchaseTicketDTO,
+  ) {
+    const data = await this.eventService.buyTicket(eventId, body);
+    await this.successResponse.ok(res, req, { data });
+  }
+
+  @Get("/events/:eventId/sales-report")
   async getSalesReport(
     @Req() req: Request,
     @Res() res: Response,
@@ -154,7 +195,7 @@ export class EventsController {
     await this.successResponse.ok(res, req, { data, pagination: extraData });
   }
 
-  @Get("/:eventId/guests")
+  @Get("/events/:eventId/guests")
   async getEventGuests(
     @Req() req: Request,
     @Res() res: Response,
@@ -167,8 +208,49 @@ export class EventsController {
     await this.successResponse.ok(res, req, { data, pagination: extraData });
   }
 
+  @Delete("/events/:eventId/images")
+  async removeEventImage(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Param("eventId", new ObjectIdValidationPipe()) eventId: string,
+    @UserDecorator() user: User,
+    @Body(new RemoveEventImagesPipe()) body: RemoveEventImagesDTO,
+  ) {
+    const data = await this.eventService.removeEventImages(eventId, body, user);
+    await this.successResponse.ok(res, req, { data });
+  }
+
+  @Delete("/events/:eventId")
+  async removeEvent(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Param("eventId", new ObjectIdValidationPipe()) eventId: string,
+    @UserDecorator() user: User,
+  ) {
+    const data = await this.eventService.removeEvent(eventId, user);
+    await this.successResponse.ok(res, req, { data });
+  }
+
+  @Put("/events/:eventId")
+  @UseInterceptors(
+    FilesInterceptor("files", MAX_FILES, {
+      storage: multer.memoryStorage(),
+    }),
+  )
+  async editEvent(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Body(new UpdateEventPipe()) body: AddEventDTO,
+    @Param("eventId", new ObjectIdValidationPipe()) eventId: string,
+    @UploadedFiles() files: Array<Express.Multer.File>,
+    @UserDecorator() user: User,
+  ) {
+    const data = await this.eventService.editEvent(files, eventId, body, user);
+    await this.successResponse.ok(res, req, { data });
+  }
+
   @PUBLIC()
-  @Get(":id")
+  @Get("/events/:id")
   async getEvent(
     @Req() req: Request,
     @Res() res: Response,

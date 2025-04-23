@@ -21,6 +21,9 @@ import { User } from "@/datasources/mongodb/schemas/user.schema";
 import { AddOrganisationDTO, AddUserDTO } from "../user/user.dto";
 import { v4 as uuid } from "uuid";
 import { AwsService } from "../aws/aws.service";
+import { MongoDataServices } from "@/datasources/mongodb/mongodb.service";
+import { PermissionService } from "../permission/permission.service";
+import { Types } from "mongoose";
 @Injectable()
 export class AuthService {
   jwtAudience = appConfig.jwtAudience;
@@ -32,6 +35,8 @@ export class AuthService {
     private readonly userService: UserService,
     private readonly redisService: RedisService,
     private readonly awsService: AwsService,
+    private readonly mongoService: MongoDataServices,
+    private readonly permissionService: PermissionService,
   ) {}
 
   async generateAuthToken(data: User): Promise<string> {
@@ -70,6 +75,7 @@ export class AuthService {
       currentOrganisation,
       organisations,
     } = user;
+    const userRole = await this.permissionService.getRole({ _id: user.role });
     return {
       userId,
       firstName,
@@ -80,6 +86,7 @@ export class AuthService {
       userType,
       currentOrganisation: currentOrganisation || "",
       organisations: organisations || [],
+      role: userRole,
     };
   }
 
@@ -90,6 +97,7 @@ export class AuthService {
       if (!user) {
         return Promise.reject(responseHash.invalidCredentials);
       }
+
       const isPasswordCorrect = await bcrypt.compare(password, user.password);
       if (!isPasswordCorrect) {
         return Promise.reject(responseHash.invalidCredentials);
@@ -177,11 +185,15 @@ export class AuthService {
   async onboardUser(body: AddUserDTO): Promise<ITemporaryUserResponse> {
     try {
       const { email, phoneNumber, companyName, website } = body;
-      //Check to Uniqueness of Data
-      await this.userService.checkUserUniqueness(
-        [{ email }, { phoneNumber }, { companyName }, { website }],
-        true,
-      );
+      const queryArray: Record<string, string>[] = [{ email }, { phoneNumber }];
+      if (companyName) {
+        queryArray.push({ companyName });
+      }
+      if (website) {
+        queryArray.push({ website });
+      }
+
+      await this.userService.checkUserUniqueness(queryArray, true);
       return await this.storeTemporaryRegistration(email, body);
     } catch (e) {
       return Promise.reject(e);
@@ -191,7 +203,6 @@ export class AuthService {
   async onboardOrganiser(body: AddUserDTO): Promise<ILoginResponse> {
     try {
       const { email, phoneNumber, companyName, website } = body;
-      //Check to Uniqueness of Data
       await this.userService.checkUserUniqueness(
         [{ email }, { phoneNumber }, { companyName }, { website }],
         true,
@@ -204,8 +215,11 @@ export class AuthService {
   private async rejectWrongUserActor(body: AddUserDTO, actor: User) {
     const isForbidden =
       body.userType === "vendor" ||
-      (body.userType === "vendorUser" && actor.userType !== "vendor") ||
-      (body.userType === "adminUser" && !actor.userType.includes("admin"));
+      (body.userType === "vendoruser" &&
+        !["admin", "superadmin", "vendor"].includes(
+          actor.userType.toLowerCase(),
+        )) ||
+      (body.userType === "adminuser" && !actor.userType.includes("admin"));
 
     if (isForbidden) return Promise.reject(responseHash.forbiddenAction);
   }
@@ -215,7 +229,32 @@ export class AuthService {
     actor: User,
   ): Promise<ITemporaryUserResponse> {
     try {
+      if (
+        !body.userType ||
+        !["vendoruser", "adminuser"].includes(body.userType.toLowerCase())
+      ) {
+        return Promise.reject({
+          ...responseHash.badPayload,
+          message:
+            "userType is a required field and correct values are [vendoruser,adminuser]",
+        });
+      }
       await this.rejectWrongUserActor(body, actor);
+      if (!body.role) {
+        return Promise.reject({
+          ...responseHash.badPayload,
+          message: "A role is necessary for this user",
+        });
+      }
+      const currentOrganisation =
+        body.currentOrganisation || actor.currentOrganisation;
+      const isValidRole = await this.permissionService.getRole(
+        {
+          _id: new Types.ObjectId(body.role),
+          organisationId: new Types.ObjectId(currentOrganisation),
+        },
+        true,
+      );
       const { email, phoneNumber } = body;
       const queryArray: Record<string, string>[] = [];
       if (email) {
@@ -227,22 +266,89 @@ export class AuthService {
 
       await this.userService.checkUserUniqueness(queryArray, true);
 
+      if (!currentOrganisation) {
+        return Promise.reject({
+          ...responseHash.badPayload,
+          message: "The user data must have a currentOrganisation property",
+        });
+      }
+
+      const organisations = [currentOrganisation];
+
       body.accountStatus = "locked";
       body.needsToChangePassword = true;
-      body.organisations = [actor.currentOrganisation];
-      body.currentOrganisation = actor.currentOrganisation;
+      body.organisations = organisations;
+      body.currentOrganisation = currentOrganisation;
+      body.role = new Types.ObjectId(isValidRole._id);
+      let companyName = "";
+      if (Object.is(actor._id, currentOrganisation)) {
+        companyName = actor.companyName;
+      } else {
+        const company = await this.userService.getUserById(currentOrganisation);
+        companyName = company.companyName;
+      }
+      body.companyName = companyName;
+      // await this.userService.addUser(body);
 
-      await this.userService.addUser(body);
       return await this.storeTemporaryRegistration(
         email,
         body,
-        actor.companyName,
+        companyName,
         true,
       );
     } catch (e) {
       return Promise.reject(e);
     }
   }
+
+  // async verifyOtherUsers(body: AddUserDTO) {
+  //   try {
+  //     const { email, phoneNumber } = body;
+  //     const queryArray: Record<string, string>[] = [];
+  //     if (email) {
+  //       queryArray.push({ email });
+  //     }
+  //     if (phoneNumber) {
+  //       queryArray.push({ phoneNumber });
+  //     }
+
+  //     await this.userService.checkUserUniqueness(queryArray, true);
+  //     const currentOrganisation =
+  //       body.currentOrganisation || actor.currentOrganisation;
+  //     if (!currentOrganisation) {
+  //       return Promise.reject({
+  //         ...responseHash.badPayload,
+  //         message: "The user data must have a currentOrganisation property",
+  //       });
+  //     }
+  //     const isValidRole = await this.permissionService.getRole(
+  //       {
+  //         _id: new Types.ObjectId(body.role),
+  //         organisationId: new Types.ObjectId(currentOrganisation),
+  //       },
+  //       true
+  //     );
+  //     const organisations = body.organisations
+  //       ? [body.currentOrganisation]
+  //       : [actor.currentOrganisation];
+
+  //     body.accountStatus = "active";
+  //     body.needsToChangePassword = false;
+  //     body.organisations = organisations;
+  //     body.currentOrganisation = currentOrganisation;
+  //     body.role = isValidRole._id;
+  //     let companyName = "";
+  //     if (Object.is(actor._id, currentOrganisation)) {
+  //       companyName = actor.companyName;
+  //     } else {
+  //       const company = await this.userService.getUserById(currentOrganisation);
+  //       companyName = company.companyName;
+  //     }
+  //     await this.userService.addUser(body);
+  //   } catch (e) {
+  //     return Promise.reject(e);
+  //   }
+  // }
 
   async verifyOTP<T>(
     body: AuthVerifyAccountDTO,
@@ -271,6 +377,7 @@ export class AuthService {
 
   async verifyUserRegistration(body: AuthVerifyAccountDTO) {
     try {
+      body.isVerified = true;
       return await this.verifyOTP<AuthVerifyAccountDTO>(
         body,
         getTempUserKey(body.otpEmail + body.otp),
@@ -297,12 +404,7 @@ export class AuthService {
   async createUser(body: any) {
     try {
       const user = await this.userService.addUser(body);
-      if (body.userType === "vendor") {
-        this.createOrganisation(
-          { name: body.companyName, owner: user._id },
-          user,
-        );
-      }
+      await this.addUserToOrganisation(body, user);
       const token = await this.generateAuthToken(user);
       return await this.loginResponseTransformer(
         token,
@@ -313,13 +415,36 @@ export class AuthService {
     }
   }
 
-  async createOrganisation(body: AddOrganisationDTO, user: User) {
+  async addUserToOrganisation(body: any, user: User) {
     try {
-      const organisation = await this.userService.createOrganisation(body);
-      const userDataToUpdate: Partial<User> = {
-        currentOrganisation: organisation._id,
-        organisations: [organisation._id],
-      };
+      let userDataToUpdate: Partial<User> = {};
+      if (body.userType !== "vendor") {
+        body.currentOrganisation = new Types.ObjectId(body.currentOrganisation);
+        userDataToUpdate = {
+          currentOrganisation: body.currentOrganisation,
+          organisations: [body.currentOrganisation],
+          role: new Types.ObjectId(body.role),
+          accountStatus: "active",
+        };
+      }
+      if (body.userType === "vendor") {
+        const getVendorRole = await this.permissionService.getRole(
+          { title: "vendor", tag: "global" },
+          true,
+        );
+        userDataToUpdate = {
+          ...userDataToUpdate,
+          role: getVendorRole._id,
+          needsToChangePassword: true,
+        };
+      }
+      if (body.isVerified) {
+        userDataToUpdate = {
+          ...userDataToUpdate,
+          accountStatus: "active",
+          needsToChangePassword: false,
+        };
+      }
       await this.userService.updateUser(userDataToUpdate, user._id);
     } catch (e) {
       return Promise.reject(e);
@@ -369,7 +494,7 @@ export class AuthService {
       }
       const user = await this.userService.getUser({ email: cachedEmail });
       await Promise.all([
-        this.userService.updateUser({ password }, user),
+        this.userService.updateUser({ password }, user._id, user),
         this.redisService.remove(cacheKey),
       ]);
       return true;

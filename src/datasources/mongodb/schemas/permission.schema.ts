@@ -10,6 +10,9 @@ export class Permission extends Document {
     enum: ["events", "tickets", "payments", "attendees", "users", "discounts"],
   })
   resource: string;
+
+  @Prop()
+  description: string;
 }
 
 export type PermissionDocument = HydratedDocument<Permission>;

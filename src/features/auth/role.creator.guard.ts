@@ -8,12 +8,15 @@ import {
 import { AuthenticatedRequest } from "@/shared/interface/interface";
 
 @Injectable()
-export class AdminGuard implements CanActivate {
+export class RoleCreatorGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const user = req.user;
 
-    if (user && ["superadmin", "admin"].includes(user.userType.toLowerCase())) {
+    if (
+      user &&
+      ["superadmin", "admin", "vendor"].includes(user.userType.toLowerCase())
+    ) {
       return true;
     }
     throw new HttpException(

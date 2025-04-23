@@ -48,7 +48,7 @@ export class User extends Document {
   password: string;
 
   @Prop({
-    enum: ["admin", "vendor", "vendorUser", "adminUser"],
+    enum: ["admin", "vendor", "vendoruser", "adminuser"],
     default: "vendor",
   })
   userType: string;
@@ -96,6 +96,11 @@ export class User extends Document {
     default: 0,
   })
   totalCommissions: number;
+
+  @Prop({
+    default: false,
+  })
+  softDelete: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

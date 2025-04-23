@@ -13,7 +13,9 @@ export class Discount extends Document {
   @Prop()
   ticketId: Types.ObjectId;
 
-  @Prop()
+  @Prop({
+    unique: true,
+  })
   code: string;
 
   @Prop({
@@ -35,7 +37,7 @@ export class Discount extends Document {
   hasExpiration: boolean;
 
   @Prop()
-  expirationDate: Date;
+  endDate: Date;
 
   @Prop()
   startDate: Date;
@@ -68,6 +70,14 @@ export class Discount extends Document {
     default: true,
   })
   status: boolean;
+
+  @Prop()
+  maxCap: number;
+
+  @Prop({
+    default: false,
+  })
+  softDelete: boolean;
 }
 
 export type DiscountDocument = HydratedDocument<Discount>;
@@ -78,6 +88,31 @@ DiscountSchema.pre("save", async function (next) {
     const quantity = this.quantity || 0;
     const quantityUsed = this.quantityUsed || 0;
     this.quantityRemaining = quantity - quantityUsed;
+    return next();
+  } catch (error: any) {
+    return next(error);
+  }
+});
+
+DiscountSchema.pre("findOneAndUpdate", async function (next) {
+  try {
+    const update = this.getUpdate();
+    const filter = this.getQuery();
+    const existingDoc = await this.model.findOne(filter).lean();
+    if (update && typeof update === "object" && !Array.isArray(update)) {
+      const updateQuery = update as Record<string, any>;
+      if (updateQuery.hasOwnProperty("$inc")) {
+        const newQuantityAvailable =
+          existingDoc.quantity -
+          existingDoc.quantityUsed -
+          updateQuery.$inc.quantityUsed;
+        updateQuery.$set.quantityRemaining = newQuantityAvailable;
+        if (newQuantityAvailable === 0) {
+          updateQuery.$set.status = false;
+        }
+        this.setUpdate(updateQuery);
+      }
+    }
     return next();
   } catch (error: any) {
     return next(error);

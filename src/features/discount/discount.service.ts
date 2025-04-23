@@ -44,7 +44,11 @@ export class DiscountService {
     }
   }
 
-  async aggregateDiscount(query: any, skip: number = 0, limit: number = 1000) {
+  async aggregateDiscount(
+    query: any,
+    skip: number = 0,
+    limit: number = 1000,
+  ): Promise<Discount[]> {
     try {
       const result = await this.mongoService.discounts.aggregateRecords([
         {
@@ -101,7 +105,7 @@ export class DiscountService {
 
   async addDiscount(data: DiscountDTO, user: User) {
     try {
-      const { targets, ownerId } = data;
+      const { targets, ownerId, discountType, value, quantity } = data;
       if (user.userType === "admin" && !ownerId) {
         return Promise.reject({
           ...responseHash.badPayload,
@@ -112,9 +116,13 @@ export class DiscountService {
       //Verify that the targets are valid, still exists, and are owned by the
       const discountParam: Partial<Discount>[] = [];
       const userId = new Types.ObjectId(ownerId);
+      const ticketsToUpdate = [];
       for (const target of targets) {
         const { targetId, targetType } = target;
         const collectionName = targetType === "event" ? "events" : "tickets";
+        if (collectionName === "tickets") {
+          ticketsToUpdate.push(targetId);
+        }
         const isTarget = await this.mongoService[
           collectionName
         ].getOneWithFields({ _id: targetId });
@@ -124,20 +132,71 @@ export class DiscountService {
             message: `${collectionName} with id as ${targetId} not found`,
           });
         }
+        //Check if the discount value is not greater than the product amount
+        if (collectionName === "events" && discountType === "flat") {
+          //Get all the tickets and ensure the discount amount is not more than any
+          const tickets =
+            await this.mongoService.tickets.getAllWithNoPagination({
+              eventId: targetId,
+            });
+          if (tickets.length === 0) {
+            return Promise.reject({
+              ...responseHash.badPayload,
+              message:
+                "A discount cannot be applied on this event since it has no tickets",
+            });
+          }
+          const priceList = tickets
+            .map((ticket) => ticket.price)
+            .sort((a: number, b: number) => a - b);
+          const min = priceList[0];
+          if (value > min) {
+            return Promise.reject({
+              ...responseHash.badPayload,
+              message: "Discount value cannot be more than the ticket value",
+            });
+          }
+        }
+
+        if (collectionName === "tickets" && discountType === "flat") {
+          if (value > isTarget.price) {
+            return Promise.reject({
+              ...responseHash.badPayload,
+              message: "Discount value cannot be more than the ticket value",
+            });
+          }
+        }
 
         discountParam.push({
-          ...(targetType === "event" && {
-            eventId: new Types.ObjectId(targetId),
-          }),
-          ...(targetType === "ticket" && {
-            ticketId: new Types.ObjectId(targetId),
-          }),
+          eventId: new Types.ObjectId(isTarget.eventId),
+          ticketId: new Types.ObjectId(targetId),
           ...data,
           ownerId: userId,
           targets,
+          ...(quantity && {
+            quantity,
+          }),
+          ...(quantity && {
+            quantityRemaining: quantity,
+          }),
         });
       }
-      return await this.mongoService.discounts.createMany(discountParam);
+      const discounts = await this.mongoService.discounts.createMany(
+        discountParam,
+      );
+      await this.mongoService.tickets.updateMany(
+        {
+          _id: {
+            $in: ticketsToUpdate,
+          },
+        },
+        {
+          $set: {
+            hasDiscount: true,
+          },
+        },
+      );
+      return discounts;
     } catch (err) {
       return Promise.reject(err);
     }
@@ -181,7 +240,26 @@ export class DiscountService {
       if (user?.userType === "vendor") {
         query.ownerId = user._id;
       }
-      await this.getDiscountWithAnyParam(query);
+      const discount = await this.getDiscountWithAnyParam(query);
+      const hasDiscountBeenUsed =
+        await this.mongoService.attendees.getOneWithAllFields({
+          discountCode: discount.code,
+        });
+
+      if (hasDiscountBeenUsed) {
+        await this.mongoService.discounts.updateOneOrCreate(
+          {
+            _id: discount._id,
+          },
+          {
+            $set: {
+              status: false,
+              softDelete: true,
+            },
+          },
+        );
+        return "Discount Soft Deleted Successfully";
+      }
       await this.mongoService.discounts.deleteOne(query);
       return "Discount Deleted Successfully";
     } catch (err) {

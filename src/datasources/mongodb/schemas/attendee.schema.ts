@@ -72,6 +72,19 @@ export class Attendee extends Document {
 
   @Prop()
   passCode: string;
+
+  @Prop()
+  discountCode: string;
+
+  @Prop({
+    default: false,
+  })
+  hasDiscount: boolean;
+
+  @Prop({
+    default: 0,
+  })
+  discountAmount: number;
 }
 
 export type AttendeeDocument = HydratedDocument<Attendee>;

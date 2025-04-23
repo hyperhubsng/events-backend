@@ -15,6 +15,9 @@ export class AddEventDTO {
   location: any;
   eventType: string;
   images: string[];
+  tickets?: ITicket[];
+  slug: string;
+  status: string;
 }
 
 export class HttpQueryDTO {
@@ -39,9 +42,11 @@ export class CreateTicketDTO {
   discountValue: number;
   quantity: number;
   available: number;
+  quantityAvailable: number;
   booked: number;
   email: string;
   orderLimit: number;
+  isAvailable: boolean;
 }
 
 export class PurchaseTicketDTO {
@@ -53,4 +58,12 @@ export class PurchaseTicketDTO {
   charges: ICharges[];
   callbackUrl: string;
   paymentProcessor: string;
+  discountCode: string;
+  hasDiscount: boolean;
+  discountAmount: number;
+  isAvailable: boolean;
+}
+
+export class RemoveEventImagesDTO {
+  images: string[];
 }

@@ -315,7 +315,6 @@ export class AnalyticsService {
   async getUsersStats(query: UserQueryDTO, user: User) {
     try {
       const { dbQueryParam } = HTTPQueryParser(query);
-      const presentation = query.presentation;
       //Store Recent Computation in memory or cache for retrieval after some time
       const aggregationQuery: Record<string, any> = {
         userType: "vendor",

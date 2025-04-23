@@ -64,6 +64,19 @@ export class Payment extends Document {
     default: "servicePayment",
   })
   transactionKind: string;
+
+  @Prop()
+  discountCode: string;
+
+  @Prop({
+    default: false,
+  })
+  hasDiscount: boolean;
+
+  @Prop({
+    default: 0,
+  })
+  discountAmount: number;
 }
 
 export type PaymentDocument = HydratedDocument<Payment>;

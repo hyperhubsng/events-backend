@@ -69,7 +69,7 @@ export class AuthGuard implements CanActivate {
       await this.validateUser(payload, request);
       return await this.permissionService.verifyPermission(context);
     } catch (e) {
-      if (e.name === "JsonWebTokenError") {
+      if (["JsonWebTokenError", "TokenExpiredError"].includes(e.name)) {
         throw new UnauthorizedException("Please,login again");
       }
       return Promise.reject(e);

@@ -1,3 +1,4 @@
+import { Role } from "@/datasources/mongodb/schemas/role.schema";
 import { Types } from "mongoose";
 
 export interface ILoginData {
@@ -45,6 +46,7 @@ export interface ILoginResponse {
   userType: string;
   currentOrganisation?: Types.ObjectId;
   organisations?: Types.ObjectId[];
+  role: Partial<Role>;
 }
 
 export interface IHttpQueryParser {
@@ -99,6 +101,14 @@ export interface IPaymentData {
   tickets: ITicket[];
   charges: ICharges[];
   amount?: number;
+  hasDiscount: boolean;
+  discountAmount: number;
+  discountCode: string;
+}
+export interface IDiscountData {
+  discountCode: string;
+  discountAmount: number;
+  quantity: number;
 }
 export interface IPaymentConfirmationEvent {
   paymentReference: string;
@@ -109,6 +119,7 @@ export interface IPaymentConfirmationEvent {
   };
   attendeeData: IAttendee;
   paymentData: IPaymentData;
+  discountData: IDiscountData;
 }
 
 export interface ISocialLink {
@@ -188,6 +199,9 @@ export interface IAttendee {
   phoneNumber: string;
   tickets: ITicket[];
   passCode: string;
+  hasDiscount: boolean;
+  discountAmount: number;
+  discountCode: string;
 }
 
 export interface AuthenticatedRequest extends Request {
