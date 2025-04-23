@@ -215,11 +215,11 @@ export class AuthService {
   private async rejectWrongUserActor(body: AddUserDTO, actor: User) {
     const isForbidden =
       body.userType === "vendor" ||
-      (body.userType === "vendorUser" &&
+      (body.userType === "vendoruser" &&
         !["admin", "superadmin", "vendor"].includes(
           actor.userType.toLowerCase(),
         )) ||
-      (body.userType === "adminUser" && !actor.userType.includes("admin"));
+      (body.userType === "adminuser" && !actor.userType.includes("admin"));
 
     if (isForbidden) return Promise.reject(responseHash.forbiddenAction);
   }
@@ -246,7 +246,15 @@ export class AuthService {
           message: "A role is necessary for this user",
         });
       }
-
+      const currentOrganisation =
+        body.currentOrganisation || actor.currentOrganisation;
+      const isValidRole = await this.permissionService.getRole(
+        {
+          _id: new Types.ObjectId(body.role),
+          organisationId: new Types.ObjectId(currentOrganisation),
+        },
+        true,
+      );
       const { email, phoneNumber } = body;
       const queryArray: Record<string, string>[] = [];
       if (email) {
@@ -257,21 +265,14 @@ export class AuthService {
       }
 
       await this.userService.checkUserUniqueness(queryArray, true);
-      const currentOrganisation =
-        body.currentOrganisation || actor.currentOrganisation;
+
       if (!currentOrganisation) {
         return Promise.reject({
           ...responseHash.badPayload,
           message: "The user data must have a currentOrganisation property",
         });
       }
-      const isValidRole = await this.permissionService.getRole(
-        {
-          _id: new Types.ObjectId(body.role),
-          organisationId: new Types.ObjectId(currentOrganisation),
-        },
-        true,
-      );
+
       const organisations = [currentOrganisation];
 
       body.accountStatus = "locked";

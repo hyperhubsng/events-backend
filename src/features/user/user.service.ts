@@ -159,14 +159,7 @@ export class UserService {
       }
       filters.push("-password");
 
-      const users = await this.mongoService.users.getAll(
-        query,
-        filters,
-        populate,
-        docLimit,
-        skip,
-        "createdAt",
-      );
+      const users = await this.aggregateUserInfo(query, docLimit, skip);
 
       const userCount = await this.mongoService.users.count(query);
       const extraData: IPagination = ResponseExtraData(req, userCount);
@@ -230,7 +223,6 @@ export class UserService {
     hasEmail: true,
   ): Promise<void> {
     try {
-      //Check to Ensure Email is Unique
       if (hasEmail) {
         const emailField = fieldsToCheck[0];
         await this.isTemporaryUser(emailField.email);
@@ -252,13 +244,45 @@ export class UserService {
           $match: query,
         },
         {
+          $lookup: {
+            from: "roles",
+            let: {
+              roleId: "$role",
+            },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$_id", "$$roleId"],
+                  },
+                },
+              },
+              {
+                $project: {
+                  roleId: "$_id",
+                  _id: 0,
+                  title: 1,
+                  permissions: 1,
+                  organisationId: 1,
+                  description: 1,
+                  softDelete: 1,
+                },
+              },
+            ],
+            as: "role",
+          },
+        },
+        {
+          $unwind: "$role",
+        },
+        {
           $project: {
             softDelete: 1,
             country: 1,
             userType: 1,
             needsToChangePassword: 1,
             organisations: 1,
-
+            accountStatus: 1,
             totalEvents: 1,
             totalRevenue: 1,
             totalCommissions: 1,
@@ -266,10 +290,8 @@ export class UserService {
             updatedAt: 1,
             email: 1,
             companyName: 1,
-
             lastName: 1,
             firstName: 1,
-
             dob: { $ifNull: ["$dob", ""] },
             gender: { $ifNull: ["$gender", ""] },
             role: { $ifNull: ["$role", ""] },
