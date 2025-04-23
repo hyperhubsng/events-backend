@@ -13,7 +13,7 @@ export class AnalyticsService {
     try {
       if (
         ["admin", "superadmin", "adminUser"].includes(
-          user.userType.toLowerCase(),
+          user.userType.toLowerCase()
         )
       ) {
         return this.getStatsForAdmin(query, user);
@@ -113,7 +113,7 @@ export class AnalyticsService {
     aggregationQuery: any,
     skip: number,
     limit: number,
-    collectionName: keyof MongoDataServices,
+    collectionName: keyof MongoDataServices
   ) {
     return await this.mongoService[collectionName].aggregateRecords([
       {
@@ -140,11 +140,11 @@ export class AnalyticsService {
       //Store Recent Computation in memory or cache for retrieval after some time
       const aggregationQuery: Record<string, any> = {};
       if (query.from) {
-        aggregationQuery.startDate = dbQueryParam.createdAt;
+        aggregationQuery.createdAt = dbQueryParam.createdAt;
       }
       if (
         !["admin", "superadmin", "adminUser"].includes(
-          user.userType.toLowerCase(),
+          user.userType.toLowerCase()
         )
       ) {
         aggregationQuery.ownerId = user._id;
@@ -180,13 +180,13 @@ export class AnalyticsService {
           aggregationQuery,
           skip,
           limit,
-          "events",
+          "events"
         );
         for (const event of events) {
           const eventDate = new Date(event.startDate);
           const parsedDate = dateParser(eventDate);
           if (presentation === "weekly") {
-            if (statsHash.hasOwnProperty(`${eventDate}`)) {
+            if (statsHash.hasOwnProperty(`${parsedDate}`)) {
               statsHash[`${parsedDate}`] += 1;
             } else {
               statsHash[`${parsedDate}`] = 1;
@@ -205,7 +205,7 @@ export class AnalyticsService {
           aggregationQuery,
           skip,
           1,
-          "events",
+          "events"
         );
         if (hasMoreDataList.length === 0) {
           hasMoreData = false;
@@ -230,15 +230,16 @@ export class AnalyticsService {
       //Store Recent Computation in memory or cache for retrieval after some time
       const aggregationQuery: Record<string, any> = {};
       if (query.from) {
-        aggregationQuery.startDate = dbQueryParam.createdAt;
+        aggregationQuery.createdAt = dbQueryParam.createdAt;
       }
       if (
-        !["admin", "superadmin", "adminUser"].includes(
-          user.userType.toLowerCase(),
+        !["admin", "superadmin", "adminuser"].includes(
+          user.userType.toLowerCase()
         )
       ) {
         aggregationQuery.beneficiaryId = user._id;
       }
+
       const limit = 1000;
       let skip = 0;
       let hasMoreData = true;
@@ -269,13 +270,14 @@ export class AnalyticsService {
           aggregationQuery,
           skip,
           limit,
-          "payments",
+          "payments"
         );
         for (const event of events) {
           const eventDate = new Date(event.paymentDate);
           const parsedDate = dateParser(eventDate);
+
           if (presentation === "weekly") {
-            if (statsHash.hasOwnProperty(`${eventDate}`)) {
+            if (statsHash.hasOwnProperty(`${parsedDate}`)) {
               statsHash[`${parsedDate}`] += event.amount;
             } else {
               statsHash[`${parsedDate}`] = event.amount;
@@ -283,6 +285,7 @@ export class AnalyticsService {
           }
           if (presentation === "monthly") {
             const monthNumber = eventDate.getMonth();
+
             const month = monthNames[monthNumber];
             statsHash[`${month}`] += event.amount;
           }
@@ -294,13 +297,12 @@ export class AnalyticsService {
           aggregationQuery,
           skip,
           1,
-          "payments",
+          "payments"
         );
         if (hasMoreDataList.length === 0) {
           hasMoreData = false;
         }
       }
-
       for (const [key, value] of Object.entries(statsHash)) {
         statsData.push({
           [key]: value,
@@ -317,18 +319,17 @@ export class AnalyticsService {
       const { dbQueryParam } = HTTPQueryParser(query);
       //Store Recent Computation in memory or cache for retrieval after some time
       const aggregationQuery: Record<string, any> = {
-        userType: "vendor",
+        userType: query.userType || "vendor",
       };
       if (query.from) {
-        aggregationQuery.startDate = dbQueryParam.createdAt;
+        aggregationQuery.createdAt = dbQueryParam.createdAt;
       }
       if (
         !["admin", "superadmin", "adminUser"].includes(
-          user.userType.toLowerCase(),
+          user.userType.toLowerCase()
         )
       ) {
-        aggregationQuery.currentOrganisation = user._id;
-        aggregationQuery.userType = "vendorUser";
+        aggregationQuery.currentOrganisation = user.currentOrganisation;
       }
       const limit = 1000;
       let skip = 0;
@@ -344,7 +345,7 @@ export class AnalyticsService {
           aggregationQuery,
           skip,
           limit,
-          "users",
+          "users"
         );
         for (const event of events) {
           const status = event.accountStatus === "active" ? true : false;
@@ -361,7 +362,7 @@ export class AnalyticsService {
           aggregationQuery,
           skip,
           1,
-          "users",
+          "users"
         );
         if (hasMoreDataList.length === 0) {
           hasMoreData = false;
