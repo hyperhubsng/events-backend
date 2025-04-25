@@ -30,7 +30,7 @@ export class PermissionService {
   constructor(
     private readonly mongoService: MongoDataServices,
     private readonly reflector: Reflector,
-    private readonly userService: UserService,
+    private readonly userService: UserService
   ) {}
 
   async createPermission(data: CreatePermissionDTO) {
@@ -58,7 +58,7 @@ export class PermissionService {
 
   async getRole(
     query: _FilterQuery<Role>,
-    throwError: boolean = false,
+    throwError: boolean = false
   ): Promise<Role> {
     try {
       const role = await this.aggregateRoles(query);
@@ -90,7 +90,7 @@ export class PermissionService {
 
   httpQueryFormulator(
     httpQuery: PermissionsQueryDTO,
-    user?: User,
+    user?: User
   ): Record<string, numStrObj> {
     let query: Record<string, numStrObj> = {};
     if (httpQuery.q) {
@@ -154,7 +154,7 @@ export class PermissionService {
   async listPermissions(
     req: Request,
     httpQuery: PermissionsQueryDTO,
-    user?: User,
+    user?: User
   ) {
     try {
       const { skip, docLimit, dbQueryParam } = HTTPQueryParser(req.query);
@@ -170,7 +170,7 @@ export class PermissionService {
       const queryResult = await this.aggregatePermissions(
         query,
         skip,
-        docLimit,
+        docLimit
       );
       const queryCount = await this.mongoService.permissions.count(query);
       const extraData: IPagination = ResponseExtraData(req, queryCount);
@@ -188,7 +188,7 @@ export class PermissionService {
   async aggregatePermissions(
     query: any,
     skip: number = 0,
-    limit: number = 1000,
+    limit: number = 1000
   ) {
     try {
       const result = await this.mongoService.permissions.aggregateRecords([
@@ -258,7 +258,7 @@ export class PermissionService {
 
       const allPermissions = await this.aggregatePermissions({}, 0, 1000);
       const systemPermssionSet = new Set(
-        allPermissions.map((all: Permission) => all.title),
+        allPermissions.map((all: Permission) => all.title)
       );
       const invalidPermissions = new Set(data.permissions);
       for (const elem of invalidPermissions) {
@@ -326,7 +326,7 @@ export class PermissionService {
   async verifyPermission(context: ExecutionContext): Promise<boolean> {
     const permissionList = this.reflector.get<string>(
       "permissions",
-      context.getHandler(),
+      context.getHandler()
     );
 
     if (!permissionList) {
@@ -343,7 +343,7 @@ export class PermissionService {
     }
 
     const isSuperAdmin = user.userType === "admin";
-    if (isSuperAdmin) {
+    if (["admin", "superadmin"].includes(user.userType.toLowerCase())) {
       return true;
     }
 
@@ -354,11 +354,11 @@ export class PermissionService {
     if (
       !userPermissions ||
       !userPermissions.permissions.some((perm: string) =>
-        permissionList.includes(perm),
+        permissionList.includes(perm)
       )
     ) {
       throw new UnauthorizedException(
-        `Unauthorized: User does not have the required permission`,
+        `Unauthorized: User does not have the required permission`
       );
     }
     return true;
@@ -453,7 +453,7 @@ export class PermissionService {
   private async rejectIllegalPermission(data: any) {
     const allPermissions = await this.aggregatePermissions({}, 0, 1000);
     const systemPermssionSet = new Set(
-      allPermissions.map((all: Permission) => all.title),
+      allPermissions.map((all: Permission) => all.title)
     );
     const invalidPermissions = new Set(data.permissions);
     for (const elem of invalidPermissions) {
