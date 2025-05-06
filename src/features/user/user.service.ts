@@ -18,7 +18,7 @@ import { RedisService } from "@/datasources/redis/redis.service";
 export class UserService {
   constructor(
     private readonly mongoService: MongoDataServices,
-    private readonly redisService: RedisService,
+    private readonly redisService: RedisService
   ) {}
 
   async getUser(param: _FilterQuery<User>): Promise<User> {
@@ -34,7 +34,7 @@ export class UserService {
       return await this.updateUser(
         { softDelete: true, accountStatus: "inactive" },
         userId,
-        user,
+        user
       );
     } catch (e) {
       return Promise.reject(e);
@@ -43,7 +43,7 @@ export class UserService {
 
   async rejectUserTyype(
     userId: string | Types.ObjectId,
-    category: string,
+    category: string
   ): Promise<void> {
     try {
       const user = await this.getUser({ _id: userId });
@@ -63,7 +63,7 @@ export class UserService {
   async checkForExistingUser(queryParam: Record<string, any>[]): Promise<void> {
     const user: any = await this.mongoService.users.getOne(
       { $or: queryParam },
-      ["email"],
+      ["email"]
     );
     if (user) {
       return Promise.reject(responseHash.duplicateExists);
@@ -73,7 +73,7 @@ export class UserService {
   async checkForInvalidUser(queryParam: Record<string, any>[]): Promise<void> {
     const user: any = await this.mongoService.users.getOne(
       { $or: queryParam },
-      ["email"],
+      ["email"]
     );
     if (!user) {
       return Promise.reject(responseHash.notFound);
@@ -87,7 +87,7 @@ export class UserService {
   async updateUser(
     body: Partial<User>,
     userId: Types.ObjectId | string,
-    user?: User,
+    user?: User
   ) {
     await this.checkForInvalidUser([{ _id: userId }]);
     if (user && user.needsToChangePassword) {
@@ -140,7 +140,7 @@ export class UserService {
       if (
         !user.currentOrganisation &&
         !["admin", "adminuser", "superadmin"].includes(
-          user.userType.toLowerCase(),
+          user.userType.toLowerCase()
         )
       ) {
         return Promise.reject(responseHash.forbiddenAction);
@@ -150,15 +150,14 @@ export class UserService {
       const query: Record<string, any> = this.httpQueryFormulator(httpQuery);
       if (
         !["admin", "adminuser", "superadmin"].includes(
-          user.userType.toLowerCase(),
+          user.userType.toLowerCase()
         )
       ) {
         query.currentOrganisation = new Types.ObjectId(
-          user.currentOrganisation,
+          user.currentOrganisation
         );
       }
       filters.push("-password");
-
       const users = await this.aggregateUserInfo(query, docLimit, skip);
 
       const userCount = await this.mongoService.users.count(query);
@@ -171,7 +170,7 @@ export class UserService {
       }
       if (!["admin", "adminuser", "superadmin"].includes(user.userType)) {
         statsQuery.currentOrganisation = new Types.ObjectId(
-          user.currentOrganisation,
+          user.currentOrganisation
         );
       }
 
@@ -220,7 +219,7 @@ export class UserService {
 
   async checkUserUniqueness(
     fieldsToCheck: Record<string, any>[],
-    hasEmail: true,
+    hasEmail: true
   ): Promise<void> {
     try {
       if (hasEmail) {
@@ -236,7 +235,7 @@ export class UserService {
   async aggregateUserInfo(
     query: Record<string, any>,
     limit: number = 1000,
-    skip: number = 0,
+    skip: number = 0
   ) {
     try {
       return await this.mongoService.users.aggregateRecords([
@@ -273,7 +272,10 @@ export class UserService {
           },
         },
         {
-          $unwind: "$role",
+          $unwind: {
+            path: "$role",
+            preserveNullAndEmptyArrays: true,
+          },
         },
         {
           $project: {
@@ -294,7 +296,7 @@ export class UserService {
             firstName: 1,
             dob: { $ifNull: ["$dob", ""] },
             gender: { $ifNull: ["$gender", ""] },
-            role: { $ifNull: ["$role", ""] },
+            role: { $ifNull: ["$role", null] },
             designation: { $ifNull: ["$designation", ""] },
             phoneNumber: { $ifNull: ["$phoneNumber", ""] },
             profileImageUrl: { $ifNull: ["$profileImageUrl", ""] },
