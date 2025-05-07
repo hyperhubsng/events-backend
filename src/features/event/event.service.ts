@@ -142,7 +142,7 @@ export class EventService {
         });
       }
 
-      if (files.length > 0) {
+      if (files && files.length > 0) {
         const filePromises = files.map((file) =>
           this.s3Service.putObject(
             `${uuid()}-${file.originalname}`,
