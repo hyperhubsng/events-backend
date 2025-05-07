@@ -30,6 +30,7 @@ import { UserDecorator } from "../user/user.decorator";
 import { User } from "@/datasources/mongodb/schemas/user.schema";
 import { RoleCreatorGuard } from "../auth/role.creator.guard";
 import { ObjectIdValidationPipe } from "@/shared/pipes/object-id-pipe";
+import { Types } from "mongoose";
 
 @Controller()
 export class PermissionController {
@@ -111,6 +112,20 @@ export class PermissionController {
     @Body(new UpdateRolePipe()) body: UpdateRoleDTO,
   ) {
     const result = await this.permissionService.editRole(id, body, user);
+    this.successResponse.ok(res, req, { data: result });
+  }
+
+  @UseGuards(RoleCreatorGuard)
+  @Get("/roles/:id")
+  async getRole(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Param("id", new ObjectIdValidationPipe()) id: string,
+  ) {
+    const result = await this.permissionService.getRole(
+      { _id: new Types.ObjectId(id) },
+      true,
+    );
     this.successResponse.ok(res, req, { data: result });
   }
 }

@@ -32,7 +32,9 @@ export class PaymentService {
     private readonly eventEmitter: EventEmitter2,
     private readonly awsService: AwsService,
   ) {}
-  async makePayment(body: ITransactionData): Promise<IPaymentLinkResponse> {
+  async generatePaymentLink(
+    body: ITransactionData,
+  ): Promise<IPaymentLinkResponse> {
     try {
       body.amount = appConfig.isLive
         ? body.amount

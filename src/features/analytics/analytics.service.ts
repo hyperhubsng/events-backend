@@ -13,7 +13,7 @@ export class AnalyticsService {
     try {
       if (
         ["admin", "superadmin", "adminUser"].includes(
-          user.userType.toLowerCase()
+          user.userType.toLowerCase(),
         )
       ) {
         return this.getStatsForAdmin(query, user);
@@ -113,7 +113,7 @@ export class AnalyticsService {
     aggregationQuery: any,
     skip: number,
     limit: number,
-    collectionName: keyof MongoDataServices
+    collectionName: keyof MongoDataServices,
   ) {
     return await this.mongoService[collectionName].aggregateRecords([
       {
@@ -144,7 +144,7 @@ export class AnalyticsService {
       }
       if (
         !["admin", "superadmin", "adminUser"].includes(
-          user.userType.toLowerCase()
+          user.userType.toLowerCase(),
         )
       ) {
         aggregationQuery.ownerId = user._id;
@@ -180,7 +180,7 @@ export class AnalyticsService {
           aggregationQuery,
           skip,
           limit,
-          "events"
+          "events",
         );
         for (const event of events) {
           const eventDate = new Date(event.startDate);
@@ -205,7 +205,7 @@ export class AnalyticsService {
           aggregationQuery,
           skip,
           1,
-          "events"
+          "events",
         );
         if (hasMoreDataList.length === 0) {
           hasMoreData = false;
@@ -234,7 +234,7 @@ export class AnalyticsService {
       }
       if (
         !["admin", "superadmin", "adminuser"].includes(
-          user.userType.toLowerCase()
+          user.userType.toLowerCase(),
         )
       ) {
         aggregationQuery.beneficiaryId = user._id;
@@ -270,7 +270,7 @@ export class AnalyticsService {
           aggregationQuery,
           skip,
           limit,
-          "payments"
+          "payments",
         );
         for (const event of events) {
           const eventDate = new Date(event.paymentDate);
@@ -297,7 +297,7 @@ export class AnalyticsService {
           aggregationQuery,
           skip,
           1,
-          "payments"
+          "payments",
         );
         if (hasMoreDataList.length === 0) {
           hasMoreData = false;
@@ -326,7 +326,7 @@ export class AnalyticsService {
       }
       if (
         !["admin", "superadmin", "adminUser"].includes(
-          user.userType.toLowerCase()
+          user.userType.toLowerCase(),
         )
       ) {
         aggregationQuery.currentOrganisation = user.currentOrganisation;
@@ -345,7 +345,7 @@ export class AnalyticsService {
           aggregationQuery,
           skip,
           limit,
-          "users"
+          "users",
         );
         for (const event of events) {
           const status = event.accountStatus === "active" ? true : false;
@@ -362,7 +362,7 @@ export class AnalyticsService {
           aggregationQuery,
           skip,
           1,
-          "users"
+          "users",
         );
         if (hasMoreDataList.length === 0) {
           hasMoreData = false;

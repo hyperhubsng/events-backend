@@ -1560,29 +1560,14 @@ export const removeEventImageSchema = joi
   .options({ stripUnknown: true });
 export const updateRoleSchema = joi
   .object({
-    action: joi
-      .string()
-      .valid("add_permissions", "remove_permissions", "others")
-      .required()
+    permissions: joi
+      .array()
+      .items(joi.string())
+      .optional()
       .messages({
-        "string.empty": validationMessages("action").empty,
-        "any.only": validationMessages("action").only,
+        "string.empty": validationMessages("resource").empty,
+        "any.only": validationMessages("resource").only,
       }),
-    permissions: joi.when("action", {
-      is: ["add_permissions", "remove_permissions"],
-      then: joi
-        .array()
-        .items(joi.string())
-        .required()
-        .messages({
-          "string.empty": validationMessages("resource").empty,
-          "any.only": validationMessages("resource").only,
-        }),
-      otherwise: joi.forbidden().messages({
-        "any.unknown":
-          "permissions is not needed if action is for other fields",
-      }),
-    }),
     title: joi
       .string()
       .optional()

@@ -8,6 +8,7 @@ import {
   CreatePermissionDTO,
   CreateRoleDTO,
   PermissionsQueryDTO,
+  UpdateRoleDTO,
 } from "./permission.dto";
 import { Types, _FilterQuery } from "mongoose";
 import { Permission } from "@/datasources/mongodb/schemas/permission.schema";
@@ -30,7 +31,7 @@ export class PermissionService {
   constructor(
     private readonly mongoService: MongoDataServices,
     private readonly reflector: Reflector,
-    private readonly userService: UserService
+    private readonly userService: UserService,
   ) {}
 
   async createPermission(data: CreatePermissionDTO) {
@@ -58,7 +59,7 @@ export class PermissionService {
 
   async getRole(
     query: _FilterQuery<Role>,
-    throwError: boolean = false
+    throwError: boolean = false,
   ): Promise<Role> {
     try {
       const role = await this.aggregateRoles(query);
@@ -90,7 +91,7 @@ export class PermissionService {
 
   httpQueryFormulator(
     httpQuery: PermissionsQueryDTO,
-    user?: User
+    user?: User,
   ): Record<string, numStrObj> {
     let query: Record<string, numStrObj> = {};
     if (httpQuery.q) {
@@ -154,7 +155,7 @@ export class PermissionService {
   async listPermissions(
     req: Request,
     httpQuery: PermissionsQueryDTO,
-    user?: User
+    user?: User,
   ) {
     try {
       const { skip, docLimit, dbQueryParam } = HTTPQueryParser(req.query);
@@ -170,7 +171,7 @@ export class PermissionService {
       const queryResult = await this.aggregatePermissions(
         query,
         skip,
-        docLimit
+        docLimit,
       );
       const queryCount = await this.mongoService.permissions.count(query);
       const extraData: IPagination = ResponseExtraData(req, queryCount);
@@ -188,7 +189,7 @@ export class PermissionService {
   async aggregatePermissions(
     query: any,
     skip: number = 0,
-    limit: number = 1000
+    limit: number = 1000,
   ) {
     try {
       const result = await this.mongoService.permissions.aggregateRecords([
@@ -258,7 +259,7 @@ export class PermissionService {
 
       const allPermissions = await this.aggregatePermissions({}, 0, 1000);
       const systemPermssionSet = new Set(
-        allPermissions.map((all: Permission) => all.title)
+        allPermissions.map((all: Permission) => all.title),
       );
       const invalidPermissions = new Set(data.permissions);
       for (const elem of invalidPermissions) {
@@ -326,7 +327,7 @@ export class PermissionService {
   async verifyPermission(context: ExecutionContext): Promise<boolean> {
     const permissionList = this.reflector.get<string>(
       "permissions",
-      context.getHandler()
+      context.getHandler(),
     );
 
     if (!permissionList) {
@@ -354,11 +355,11 @@ export class PermissionService {
     if (
       !userPermissions ||
       !userPermissions.permissions.some((perm: string) =>
-        permissionList.includes(perm)
+        permissionList.includes(perm),
       )
     ) {
       throw new UnauthorizedException(
-        `Unauthorized: User does not have the required permission`
+        `Unauthorized: User does not have the required permission`,
       );
     }
     return true;
@@ -420,32 +421,13 @@ export class PermissionService {
     }
     return roleQuery;
   }
-  async editRole(roleId: string, body: any, user: User) {
+  async editRole(roleId: string, body: UpdateRoleDTO, user: User) {
     try {
       const roleQuery = await this.roleHelper(roleId, user);
-      if (body.action === "add_permissions") {
+      if (body.permissions) {
         await this.rejectIllegalPermission(body);
-        return await this.mongoService.roles.updateOneOrCreate(roleQuery, {
-          $push: {
-            permissions: {
-              $each: body.permissions,
-            },
-          },
-        });
       }
-      if (body.action === "remove_permissions") {
-        await this.rejectIllegalPermission(body);
-        return await this.mongoService.roles.updateOneOrCreate(roleQuery, {
-          $pull: {
-            permissions: {
-              $in: body.permissions,
-            },
-          },
-        });
-      }
-      if (body.action === "others") {
-        return await this.mongoService.roles.updateOneOrCreate(roleQuery, body);
-      }
+      return await this.mongoService.roles.updateOneOrCreate(roleQuery, body);
     } catch (e) {
       return Promise.reject(e);
     }
@@ -453,7 +435,7 @@ export class PermissionService {
   private async rejectIllegalPermission(data: any) {
     const allPermissions = await this.aggregatePermissions({}, 0, 1000);
     const systemPermssionSet = new Set(
-      allPermissions.map((all: Permission) => all.title)
+      allPermissions.map((all: Permission) => all.title),
     );
     const invalidPermissions = new Set(data.permissions);
     for (const elem of invalidPermissions) {
