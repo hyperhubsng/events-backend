@@ -184,6 +184,10 @@ export interface ITicket {
   title: string;
   eventId: Types.ObjectId;
   ownerId: Types.ObjectId;
+  quantityAvailable: number;
+  quantitySold: number;
+  totalAmountSold: number;
+  totalAmountReceived: number;
 }
 
 export interface ICharges {

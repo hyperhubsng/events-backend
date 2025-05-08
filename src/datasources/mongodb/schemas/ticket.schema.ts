@@ -64,10 +64,14 @@ export class Ticket extends Document {
   @Prop()
   orderLimit: number;
 
-  @Prop()
+  @Prop({
+    default: 0,
+  })
   totalAmountSold: number;
 
-  @Prop()
+  @Prop({
+    default: 0,
+  })
   totalAmountReceived: number;
 
   @Prop({

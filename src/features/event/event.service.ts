@@ -111,6 +111,8 @@ export class EventService {
             ...ticket,
             eventId: event._id,
             ownerId: event.ownerId,
+            quantityAvailable: ticket.quantity,
+            quantitySold: 0,
           });
         }
         await this.mongoService.tickets.createMany(ticketList);
@@ -810,7 +812,12 @@ export class EventService {
           _id: new Types.ObjectId(ticket.ticketId),
           eventId,
         });
-
+        if (!isTicket.quantityAvailable) {
+          return Promise.reject({
+            ...responseHash.badPayload,
+            message: `This ticket(${isTicket.title}) cannot be sold. Please contact admin`,
+          });
+        }
         await this.enforceTicketSellingConditions(isTicket, ticket);
         ticket.amount = ticket.quantity * isTicket.price;
         ticket.title = isTicket.title;
@@ -844,7 +851,7 @@ export class EventService {
     try {
       const eventTitle = event.title;
       const eventId = event._id;
-      const processor = body.paymentProcessor || PAYMENT_PROCESSORS.flutterWave;
+      const processor = body.paymentProcessor || PAYMENT_PROCESSORS.paystack;
       body.tickets = computedTickets;
       const paymentData: ITransactionData = {
         paymentReference: uuid(),
