@@ -213,7 +213,7 @@ export const addEventSchema = joi
                 "number.positive": validationMessages("orderLimit").positive,
               }),
           }),
-        }),
+        })
       )
       .optional()
       .messages({
@@ -508,7 +508,7 @@ export const eventListSchema = joi
         "cancelled",
         "upcoming",
         "past",
-        "active",
+        "active"
       )
       .optional()
       .messages({
@@ -625,7 +625,7 @@ export const purchaseTicketSchema = joi
         joi.object({
           ticketId: joi.string().custom(validateObjectId).required(),
           quantity: joi.number().required(),
-        }),
+        })
       )
       .required()
       .messages({
@@ -638,7 +638,7 @@ export const purchaseTicketSchema = joi
         joi.object({
           title: joi.string().required(),
           amount: joi.number().required(),
-        }),
+        })
       )
       .optional()
       .messages({
@@ -722,7 +722,7 @@ export const createDiscountSchema = joi
               "any.only": validationMessages("targetType").only,
               "string.base": validationMessages("targetType").string,
             }),
-        }),
+        })
       )
       .required()
       .messages({
@@ -904,7 +904,7 @@ export const updateDiscountSchema = joi
               "any.only": validationMessages("targetType").only,
               "string.base": validationMessages("targetType").string,
             }),
-        }),
+        })
       )
       .required()
       .messages({
@@ -1310,14 +1310,6 @@ export const updateEventSchema = joi
         "array.length": validationMessages("coordinates").length,
         "number.base": validationMessages("coordinates").numberBase,
       }),
-    ownerId: joi
-      .string()
-      .optional()
-      .custom(validateObjectId)
-      .messages({
-        "string.empty": validationMessages("ownerId").empty,
-        "any.only": validationMessages("ownerId").only,
-      }),
     cost: joi
       .number()
       .positive()
@@ -1488,7 +1480,7 @@ export const updateEventSchema = joi
                 "number.positive": validationMessages("orderLimit").positive,
               }),
           }),
-        }),
+        })
       )
       .optional()
       .messages({
