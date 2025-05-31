@@ -883,7 +883,12 @@ export class EventService {
         _id: new Types.ObjectId(eventId),
       };
       const event = await this.getOneEvent(query);
-
+      if (event.eventType === "free") {
+        return Promise.reject({
+          ...responseHash.notFound,
+          message: "We do not currently process free events",
+        });
+      }
       await Promise.all([
         this.isEventStillActive(event),
         this.blockActionOnDeletedEvent(event),

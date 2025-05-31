@@ -546,7 +546,7 @@ export const createTicketSchema = joi
       }),
     price: joi
       .number()
-      .min(500)
+      .min(0)
       .required()
       .messages({
         "string.empty": validationMessages("price").empty,
