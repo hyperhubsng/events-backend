@@ -216,3 +216,30 @@ export interface IDiscountEntity {
   targetType: string;
   targetId: Types.ObjectId;
 }
+
+export interface IPurchaseFreeEvent {
+  reference: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  displayName: string;
+  phoneNumber: string;
+  hasDiscount: boolean;
+  discountCode: string;
+  discountAmount: number;
+  tickets: ITicket[];
+  narration: string;
+}
+
+export interface IFreeEventAttendee extends IPurchaseFreeEvent {
+  passcode: string;
+}
+
+export interface IEventSalesNotificationData {
+  passCode: string;
+  firstName: string;
+  lastName: string;
+  ticketAmount: number;
+  ticketQuantity: number;
+  eventTitle: string;
+}

@@ -83,6 +83,18 @@ export class Ticket extends Document {
 export type TicketDocument = HydratedDocument<Ticket>;
 export const TicketSchema = SchemaFactory.createForClass(Ticket);
 
+TicketSchema.pre("save", async function (next) {
+  try {
+    const quantity = this.quantity || 0;
+    const quantityUsed = this.quantitySold || 0;
+    this.quantityAvailable = quantity - quantityUsed;
+    this.quantitySold = quantityUsed;
+    return next();
+  } catch (error: any) {
+    return next(error);
+  }
+});
+
 TicketSchema.pre("findOneAndUpdate", async function (next) {
   try {
     const update = this.getUpdate();

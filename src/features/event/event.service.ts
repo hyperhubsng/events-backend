@@ -2,6 +2,7 @@ import { MongoDataServices } from "@/datasources/mongodb/mongodb.service";
 import { User } from "@/datasources/mongodb/schemas/user.schema";
 import {
   IPagination,
+  IPurchaseFreeEvent,
   ITicket,
   ITransactionData,
   numStrObj,
@@ -876,6 +877,32 @@ export class EventService {
       throw new Error(e);
     }
   }
+  prepareFreePurchasePayload(
+    body: PurchaseTicketDTO,
+    computedTickets: ITicket[],
+    event: Event
+  ) {
+    try {
+      body.tickets = computedTickets;
+      const { firstName, lastName } = body;
+      const paymentData: IPurchaseFreeEvent = {
+        reference: uuid(),
+        firstName,
+        lastName,
+        email: body.email,
+        displayName: `${firstName} ${lastName}`,
+        phoneNumber: body.phoneNumber,
+        hasDiscount: body.hasDiscount,
+        discountAmount: body.discountAmount,
+        tickets: body.tickets,
+        discountCode: body.discountCode,
+        narration: `Payment for Event ${event.title} `,
+      };
+      return paymentData;
+    } catch (e) {
+      throw new Error(e);
+    }
+  }
   async buyTicket(eventId: string, body: PurchaseTicketDTO) {
     try {
       const { tickets, charges, discountCode } = body;
@@ -883,12 +910,6 @@ export class EventService {
         _id: new Types.ObjectId(eventId),
       };
       const event = await this.getOneEvent(query);
-      if (event.eventType === "free") {
-        return Promise.reject({
-          ...responseHash.notFound,
-          message: "We do not currently process free events",
-        });
-      }
       await Promise.all([
         this.isEventStillActive(event),
         this.blockActionOnDeletedEvent(event),
@@ -904,6 +925,14 @@ export class EventService {
       body.discountAmount = totalDiscount;
       body.discountCode = discountCode;
       body.hasDiscount = discountCode ? true : false;
+      if (event.eventType === "free") {
+        const payload = this.prepareFreePurchasePayload(
+          body,
+          computedTickets,
+          event
+        );
+        return await this.paymentService.processFreeEvents(payload);
+      }
       const paymentData = this.prepareTicketPurchaseData(
         body,
         computedTickets,

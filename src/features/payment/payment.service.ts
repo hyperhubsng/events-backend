@@ -3,8 +3,10 @@ import { PaymentFactory } from "./payment.factory";
 import {
   IAttendee,
   IDiscountData,
+  IEventSalesNotificationData,
   IPaymentConfirmationEvent,
   IPaymentData,
+  IPurchaseFreeEvent,
   ITransactionData,
 } from "@/shared/interface/interface";
 import { MongoDataServices } from "@/datasources/mongodb/mongodb.service";
@@ -24,16 +26,17 @@ import { Payment } from "@/datasources/mongodb/schemas/payment.schema";
 import { toDataURL } from "qrcode";
 import { AwsService } from "../aws/aws.service";
 import { randomInt } from "crypto";
+import { PurchaseTicketDTO } from "../event/event.dto";
 
 @Injectable()
 export class PaymentService {
   constructor(
     private readonly mongoService: MongoDataServices,
     private readonly eventEmitter: EventEmitter2,
-    private readonly awsService: AwsService,
+    private readonly awsService: AwsService
   ) {}
   async generatePaymentLink(
-    body: ITransactionData,
+    body: ITransactionData
   ): Promise<IPaymentLinkResponse> {
     try {
       body.amount = appConfig.isLive
@@ -50,6 +53,51 @@ export class PaymentService {
     } finally {
       this.logPayment(body);
     }
+  }
+
+  async processFreeEvents(body: IPurchaseFreeEvent) {
+    const { firstName, lastName, reference, tickets, narration } = body;
+    const passCode = this.getPasscode(body.reference);
+    const salesNotification: IEventSalesNotificationData = {
+      firstName,
+      lastName,
+      passCode,
+      ticketAmount: 0,
+      ticketQuantity: tickets.length,
+      eventTitle: narration,
+    };
+    let hasError = false;
+    try {
+      const attendeeData: IAttendee = {
+        firstName,
+        lastName,
+        email: body.email,
+        transactionReference: reference,
+        phoneNumber: body.phoneNumber,
+        hasDiscount: body.hasDiscount,
+        discountAmount: body.discountAmount,
+        tickets,
+        discountCode: body.discountCode,
+        passCode: this.getPasscode(body.reference),
+      };
+      this.insertAttendee(attendeeData);
+      return {
+        hasPaymentLink: false,
+        message: "Event purchase successful",
+        isEventFree: true,
+      };
+    } catch (err) {
+      hasError = true;
+      return Promise.reject(err);
+    } finally {
+      this.emitTicketSalesNotification(hasError, salesNotification);
+    }
+  }
+
+  getPasscode(baseReference: string) {
+    const slicePaymentReference = baseReference.slice(0, 2);
+    const generatedCode = this.generateCode(slicePaymentReference);
+    return generatedCode.slice(0, 9);
   }
 
   async logPayment(body: ITransactionData) {
@@ -72,14 +120,14 @@ export class PaymentService {
       const headers = req.headers;
       const paymentFactory = new PaymentFactory();
       const processor = paymentFactory.getProcessor(
-        PAYMENT_PROCESSORS.paystack,
+        PAYMENT_PROCESSORS.paystack
       );
       //Confirm the webhook
       await processor.confirmWebhook(body, headers);
       const paymentReference = body.data.reference as string;
       return await this.giveCustomerValue(
         paymentReference,
-        PAYMENT_PROCESSORS.paystack,
+        PAYMENT_PROCESSORS.paystack
       );
     } catch (err) {
       return Promise.reject(err);
@@ -103,7 +151,7 @@ export class PaymentService {
       const paymentFactory = new PaymentFactory();
       const paystack = paymentFactory.getProcessor("paystack");
       const verificationResponse = await paystack.confirmPaymentWithCallback(
-        paymentReference,
+        paymentReference
       );
 
       //Retrieve the stored payment Log
@@ -161,7 +209,7 @@ export class PaymentService {
       };
       this.eventEmitter.emit(
         "paystack-payment-confirmation",
-        eventManagerPayload,
+        eventManagerPayload
       );
 
       return "Payment completed. We will send value once confirmed";
@@ -176,7 +224,7 @@ export class PaymentService {
       const paymentFactory = new PaymentFactory();
       const paystack = paymentFactory.getProcessor(processor);
       const verificationResponse = await paystack.confirmPaymentWithCallback(
-        paymentReference,
+        paymentReference
       );
 
       //Retrieve the stored payment Log
@@ -217,7 +265,7 @@ export class PaymentService {
       };
       this.eventEmitter.emit(
         "paystack-payment-confirmation",
-        eventManagerPayload,
+        eventManagerPayload
       );
 
       return "Payment completed. We will send value once confirmed";
@@ -258,7 +306,7 @@ export class PaymentService {
         ? flwTransactionId
         : paymentReference;
       const verificationResponse = await processor.confirmPaymentWithCallback(
-        verificationId,
+        verificationId
       );
       const verificationStatus = conditionChecker
         ? verificationResponse.data.status
@@ -269,7 +317,7 @@ export class PaymentService {
       if (!verificationStatus.toLowerCase().startsWith("success")) {
         await this.mongoService.paymentLogs.updateOne(
           { _id: paymentLog._id },
-          { status: verificationStatus },
+          { status: verificationStatus }
         );
         return Promise.reject({
           ...responseHash.badPayload,
@@ -395,13 +443,38 @@ export class PaymentService {
           ticketQuantity: paymentData.tickets.length,
           eventTitle: paymentData.narration,
           passCode: attendeeData.passCode,
-        }),
+        })
       );
     }
   }
 
   private updatePaymentLog(paymentReference: string, body: any) {
     return this.mongoService.paymentLogs.updateOne({ paymentReference }, body);
+  }
+
+  private async emitTicketSalesNotification(
+    hasError: boolean,
+    attendeeData: IEventSalesNotificationData
+  ) {
+    if (hasError) {
+      return;
+    }
+    const confirmationURL = `${appConfig.ticketConfirmationURL}/${attendeeData.passCode}?action=checkin&actionMethod=scan`;
+    const qrCode = await this.generateEventQRCode(confirmationURL);
+
+    this.awsService.sendEmail(
+      ["dev@hyperhubs.net"],
+      "Hyperhubs Events",
+      TICKET_PURCHASE_MESSAGE({
+        src: qrCode,
+        firstName: attendeeData.firstName,
+        lastName: attendeeData.lastName,
+        ticketAmount: attendeeData.ticketAmount,
+        ticketQuantity: attendeeData.ticketQuantity,
+        eventTitle: attendeeData.eventTitle,
+        passCode: attendeeData.passCode,
+      })
+    );
   }
 
   private insertPayment(body: IPaymentData) {
@@ -483,7 +556,7 @@ export class PaymentService {
                 quantitySold: ticket.quantity,
                 totalAmountSold: ticket.amount,
               },
-            },
+            }
           );
         }
       }
@@ -503,7 +576,7 @@ export class PaymentService {
           $inc: {
             quantityUsed: data.quantity,
           },
-        },
+        }
       );
     } catch (error) {
       return;
